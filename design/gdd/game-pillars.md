@@ -1,10 +1,11 @@
 # Game Pillars: Adventures
 
 ## Document Status
-- **Version**: 1.0
+- **Version**: 2.0
 - **Last Updated**: 2026-06-21
-- **Approved By**: creative-director (CD-PILLARS — CONCERNS resolved, locked)
+- **Approved By**: creative-director (CD-PILLARS); pipeline pressure-tested by technical-director (TD-PIPELINE)
 - **Status**: Approved
+- **Changes in 2.0**: Added Pillar 6 (The Scene Is a Model, Not a Script); rewrote Pillar 3 (The Decisive Move) around facet-leverage; added the "enumerated branching script" anti-pillar.
 
 ---
 
@@ -13,21 +14,17 @@
 **"You can say anything, and a world built by real designers takes it seriously.
 Your cleverness — expressed in your own words — is the whole game."**
 
-The core fantasy is the *blank line*: total freedom of input, backed by the promise
-that the world has been authored to answer with real, consistent consequence.
-
 ---
 
 ## Target MDA Aesthetics
 
 | Rank | Aesthetic | How Our Game Delivers It |
 | ---- | ---- | ---- |
-| 1 | Discovery | Probing the blank line to find what the world has authored a response for |
-| 2 | Expression | Acting in your own words; class identity coloring resolution; authoring with the same toys |
-| 3 | Challenge | Finding the *decisive move* that wins an encounter |
-| 4 | Fantasy | Being a *specialist* whose worldview shapes what's possible |
+| 1 | Discovery | Probing the blank line; *discovery moves* that reveal hidden scene facets |
+| 2 | Expression | Acting in your own words; class coloring resolution; authoring with the same toys |
+| 3 | Challenge | Finding the decisive move — the facet that breaks an encounter open |
+| 4 | Fantasy | Being a specialist whose worldview shapes what's possible |
 | 5 | Narrative | Authored adventures with consequence carried through state |
-| N/A | Fellowship, Submission | No co-op/PvP core; the game rewards deliberate intent, not idle play |
 
 ---
 
@@ -35,165 +32,162 @@ that the world has been authored to answer with real, consistent consequence.
 
 ### Pillar 1: The Blank Line Is Sacred
 
-**One-Sentence Definition**: Every situation accepts freeform player intent, and the
-world resolves it into authored consequence.
+**Definition**: Every situation accepts freeform player intent, and the world
+resolves it into authored consequence.
 
-**Target Aesthetics Served**: Expression, Discovery (this pillar owns the *input
-surface*; Pillar 2 owns *resolution*).
+**Aesthetics Served**: Expression, Discovery.
 
 **Design Test**: If a feature would ever present a choice the player can't override
 in their own words, we cut it or redesign it.
 
-#### What This Means for Each Department
-| Department | This Pillar Says... | Example |
-| ---- | ---- | ---- |
-| **Game Design** | No mechanic may foreclose freeform input | No dialogue tree without a blank-line escape |
-| **Art** | The input line is the hero of the screen | The cursor/input is the visual focal point |
-| **Audio** | Acknowledge the act of input | A subtle, satisfying "commit" cue on submit |
-| **Narrative** | Situations are framed to invite open intent | Scene text ends on an open beat, not a question with set answers |
-| **Engineering** | Always-available freeform input pipeline | The text input is never modal-locked out |
+| Department | This Pillar Says... |
+| ---- | ---- |
+| Game Design | No mechanic may foreclose freeform input |
+| Art | The input line is the hero of the screen |
+| Audio | A satisfying "commit" cue on submit |
+| Narrative | Situations framed to invite open intent, not set answers |
+| Engineering | The text input is never modal-locked out |
 
-#### Serving This Pillar
-- A blank line present in every encounter, even scripted ones.
-- Suggested verbs/autocomplete that *seed* without *limiting* input.
-
-#### Violating This Pillar
-- A pure multiple-choice node with no way to type your own action.
-- A "cutscene" the player cannot act into.
+**Serving it**: a blank line in every encounter; suggested verbs that *seed* without *limiting*.
+**Violating it**: a pure multiple-choice node with no way to type your own action.
 
 ---
 
 ### Pillar 2: Translation, Not Improvisation
 
-**One-Sentence Definition**: Player freedom resolves by mapping words to authored,
-meaningful outcomes — never throwaway prose.
+**Definition**: Player freedom resolves by mapping words to authored, meaningful
+outcomes — never throwaway prose.
 
-**Target Aesthetics Served**: Discovery, Challenge, Narrative.
+**Aesthetics Served**: Discovery, Challenge, Narrative.
 
 **Design Test**: When freeform input resolves, it must connect to designed
-consequence/state. If the best we can do is a flavor reply with no stakes, the system
-failed. *(The AI fallback at a translation gap must still produce a state change,
-never prose — so it lives inside this pillar.)*
+consequence/state. If the best we can do is a flavor reply with no stakes, the
+system failed. *(The AI fallback at a translation gap must still produce a validated
+state change, never prose — so it lives inside this pillar.)*
 
-#### What This Means for Each Department
-| Department | This Pillar Says... | Example |
-| ---- | ---- | ---- |
-| **Game Design** | Every resolution emits a typed state change | No "nothing happens" outcomes without state meaning |
-| **Art** | Make the *translation moment* visible | The gold "illuminated word" reveal (Direction 2) |
-| **Audio** | Consequence has a sonic signature | A distinct cue when an authored event fires |
-| **Narrative** | Authored outcomes carry the drama, not improv prose | Designers write the consequence, not the model |
-| **Engineering** | All router tiers return the same `StateDelta`, validated before applying | Fallback output schema-checked; safe default on failure |
+| Department | This Pillar Says... |
+| ---- | ---- |
+| Game Design | Every resolution emits a typed, validated `StateDelta` |
+| Art | Make the *translation moment* visible (the gold "illuminated word") |
+| Audio | Consequence has a sonic signature |
+| Narrative | Authored outcomes carry the drama, not improv prose |
+| Engineering | All resolution paths return the same `StateDelta`, validated before applying; on failure, safe default — never raw text |
 
-#### Serving This Pillar
-- Embedding-retrieval router that lands input on authored events.
-- A bounded fallback that emits a validated state change within creator-set bounds.
-
-#### Violating This Pillar
-- The AI writing narrative prose *as* the resolution.
-- A "flavor reply" with no stakes standing in for a real outcome.
+**Serving it**: classify-don't-score translation onto authored thresholds; a bounded fallback that emits a validated state change.
+**Violating it**: the AI writing narrative prose *as* the resolution; a flavor reply with no stakes.
 
 ---
 
 ### Pillar 3: The Decisive Move
 
-**One-Sentence Definition**: Encounters are won by the right signature action at the
-right **game-state** moment — not attrition or grind. *(State-based, never
-clock-based.)*
+**Definition**: Encounters are won by the **right signature action at the right
+game-state moment** — specifically, by the action that flips the **highest-leverage
+facet**, collapsing a hard threshold to a trivial one. Not attrition, not grind, not
+the highest-magnitude action — the highest-*leverage* one. State-based, never
+clock-based.
 
-**Target Aesthetics Served**: Challenge, Fantasy.
+**Aesthetics Served**: Challenge, Fantasy.
 
 **Design Test**: Debating depth vs. grind? Choose whatever makes one clever move feel
-devastating.
+devastating. And: every encounter must have at least one **leverage facet** a player
+can discover and flip to break it open — if the only path is brute magnitude, the
+encounter is under-designed.
 
-#### What This Means for Each Department
-| Department | This Pillar Says... | Example |
-| ---- | ---- | ---- |
-| **Game Design** | Encounters have signature solutions, not HP races | No damage-sponge enemies; no resource attrition wins |
-| **Art** | The decisive move gets a visual climax | The consequence reveal beat |
-| **Audio** | Punctuate the winning move | A sharp, singular sting at resolution |
-| **Narrative** | The right action is dramatically *earned* | The encounter telegraphs its vulnerabilities |
-| **Engineering** | Turn/state-based resolution, no real-time pressure | "Moment" = game-state moment, never reaction time |
+| Department | This Pillar Says... |
+| ---- | ---- |
+| Game Design | Encounters resolve via leverage facets + conditional thresholds, not HP races; scale the idea to global facets in scene-graphs ("cut the power") |
+| Art | The decisive move gets a visual climax |
+| Audio | Punctuate the winning move with a singular sting |
+| Narrative | The leverage facet is *discoverable* and dramatically earned |
+| Engineering | Turn/state-based resolution; per-beat advancement; NO real-time pressure |
 
-#### Serving This Pillar
-- Encounters that telegraph multiple legitimate signature actions.
-- A single clever move that visibly ends the encounter.
-
-#### Violating This Pillar
-- HP-sponge enemies / DPS races.
-- Any real-time/reaction-time pressure (also an anti-pillar).
+**Serving it**: scenes that telegraph a leverage facet; a single clever move that collapses a threshold and ends the encounter.
+**Violating it**: HP-sponge enemies / magnitude races; any real-time/reaction-time pressure (also an anti-pillar).
 
 ---
 
 ### Pillar 4: Creators Play With The Same Toys
 
-**One-Sentence Definition**: The primitives that resolve play are the same ones
-creators author with; authoring is an extension of playing. **Primitive parity is the
-promise; experience parity (UI depth/polish) is not.**
+**Definition**: The primitives that resolve play are the same ones creators author
+with; authoring is an extension of playing. **Primitive parity is the promise;
+experience parity (UI depth/polish) is not.**
 
-**Target Aesthetics Served**: Expression.
+**Aesthetics Served**: Expression.
 
 **Design Test**: If a content feature can't be expressed in the creator toolkit, it
 doesn't belong in the base game either.
 
-#### What This Means for Each Department
-| Department | This Pillar Says... | Example |
-| ---- | ---- | ---- |
-| **Game Design** | Base-game content uses only authorable primitives | No hard-coded special-case events outside the schema |
-| **Art** | Authoring surfaces share the game's visual language | The toolkit feels like the game, not a spreadsheet |
-| **Audio** | Authored events can declare their own cues | Creators pick from a shared cue palette |
-| **Narrative** | The authored-event format is humane to write | Trigger phrasings + typed consequence, not raw JSON archaeology |
-| **Engineering** | One shared event/`StateDelta` schema: engine-consumable, creator-authorable, LLM-emittable | Designed once as a foundational ADR |
+| Department | This Pillar Says... |
+| ---- | ---- |
+| Game Design | Base-game content uses only authorable primitives (the Scene Model) |
+| Art | Authoring surfaces share the game's visual language |
+| Audio | Authored events declare cues from a shared palette |
+| Narrative | The Scene Model format is humane to write |
+| Engineering | One shared Scene Model / `StateDelta` schema: engine-consumable, creator-authorable, LLM-emittable; designers and creators share the Compiler (tiered access) |
 
-#### Serving This Pillar
-- The MVP authored-event format *is* the creator-facing primitive.
-- Creators get more affordances/depth, but never different primitives.
-
-#### Violating This Pillar
-- A hidden, creator-inaccessible "dev mode" for base-game content (anti-pillar).
-- Base content that uses powers the toolkit can't express.
+**Serving it**: the MVP Scene Model format *is* the creator-facing primitive; the Scene Compiler serves designers and community creators alike (tiered access).
+**Violating it**: a hidden, creator-inaccessible "dev mode" for base-game content (anti-pillar).
 
 ---
 
 ### Pillar 5: Specialists, Not Everymen
 
-**One-Sentence Definition**: Your class fantasy shapes which intents are powerful; the
-same words resolve differently per specialist.
+**Definition**: Your class fantasy shapes which intents are powerful; the same words
+resolve differently per specialist.
 
-**Target Aesthetics Served**: Fantasy, Expression.
+**Aesthetics Served**: Fantasy, Expression.
 
 **Design Test**: "Kick the brazier" should mean something different for an assassin
 than a diplomat — if class doesn't color the blank line, we've flattened it.
 
-#### What This Means for Each Department
-| Department | This Pillar Says... | Example |
-| ---- | ---- | ---- |
-| **Game Design** | Class is a filter/modifier over shared events | Same event, per-class outcome variants/eligibility |
-| **Art** | Each specialist has a distinct identity cue | Class-tinted framing of the blank line |
-| **Audio** | Class can color resolution feedback | Subtle per-class motif on signature actions |
-| **Narrative** | The world reads intent through the class lens | The assassin's "approach" reads as a kill angle |
-| **Engineering** | Router scopes candidate events by class | Class tag filters the retrieval candidate set |
+| Department | This Pillar Says... |
+| ---- | ---- |
+| Game Design | Class is a lens over a shared model — same event, per-class capability vector |
+| Art | Each specialist has a distinct identity cue |
+| Audio | Class colors resolution feedback |
+| Narrative | The world reads intent through the class lens |
+| Engineering | The Translator colors which axes are strong + the magnitude per class; resolution scopes by class |
 
-#### Serving This Pillar
-- The same intent resolving into class-specific consequences.
-- Encounters with class-specific decisive moves.
+**Serving it**: the same sentence routing to different axes per class (Diplomat→Social, Scholar→Insight, Assassin→intimidation facet).
+**Violating it**: a generalist hero for whom class never changes resolution (anti-pillar).
 
-#### Violating This Pillar
-- A generalist hero for whom class never changes resolution (anti-pillar).
-- Identical outcomes regardless of specialist.
+---
+
+### Pillar 6: The Scene Is a Model, Not a Script
+
+**Definition**: Designers author a **model of possibility** — typed thresholds on a
+shared capability ontology — not an enumerated list of outcomes. The engine resolves
+freeform intent against the model. This is the authoring counterpart to Pillar 2:
+P2 translates *the player's words* to authored outcomes; P6 translates *the
+designer's scene* to the space of possibilities.
+
+**Aesthetics Served**: Discovery (for players), Expression (for creators).
+
+**Design Test**: If authoring a scene means writing one outcome per anticipated
+player action, we've built a branching script and failed. A scene must be expressible
+as entities + typed thresholds + facets, so that *unanticipated* intents still
+resolve sensibly.
+
+| Department | This Pillar Says... |
+| ---- | ---- |
+| Game Design | Design encounters as scene models (entities, conditional thresholds, meters, facets), not decision trees |
+| Art | Visualize state/consequence, since outcomes are computed not pre-written |
+| Audio | Cues attach to dimensions/outcomes, not to scripted lines |
+| Narrative | Author the *situation and its leverage*, and let resolution compose the beats |
+| Engineering | The Scene Compiler expands sparse prose into a linted, frozen, deterministic Scene Model; the Resolver is a per-beat deterministic rules engine; classify-don't-score keeps it stable |
+
+**Serving it**: a sparse seed ("you wake in a prison cell") compiling to typed paths any reasonable intent can satisfy; the same machinery composing into scene-graphs.
+**Violating it**: an enumerated `if input == X then Y` table; LLM-improvised outcomes with no model behind them; the Compiler emitting un-linted, un-grounded thresholds.
 
 ---
 
 ## Anti-Pillars (What This Game Is NOT)
 
-- **NOT a freeform-prose generator**: we will not make the AI's narrative *writing*
-  the resolution — it compromises Pillar 2 (kills consistency and earned competence),
-  and would cost us the entire authored-consequence moat.
-- **NOT real-time / twitch combat**: it compromises Pillar 3 and the text-first
-  identity; "moment" is game-state, never reaction time.
-- **NOT a creator-only "dev mode"** players can't reach: it compromises Pillar 4 — the
-  "primitive parity vs experience parity" line must never quietly become a dev mode.
-- **NOT a do-everything generalist hero**: it compromises Pillar 5 and flattens the
-  blank line into class-agnostic verbs.
+- **NOT a freeform-prose generator** — would compromise Pillar 2 (kills consistency and earned competence).
+- **NOT real-time / twitch** — would compromise Pillar 3 and the text-first identity; "moment" is game-state, never reaction time.
+- **NOT a creator-only "dev mode"** players can't reach — would compromise Pillar 4.
+- **NOT a do-everything generalist hero** — would compromise Pillar 5.
+- **NOT an enumerated branching script** — would compromise Pillar 6; the scene is a model, not a decision tree.
 
 ---
 
@@ -201,62 +195,57 @@ than a diplomat — if class doesn't color the blank line, we've flattened it.
 
 | Priority | Pillar | Rationale |
 | ---- | ---- | ---- |
-| 1 | Pillar 2 (Translation) | The authored-consequence thesis is the moat; without it the game is "a chatbot with HP bars" |
-| 2 | Pillar 4 (Same Toys) | The unified primitive is the second differentiator and the scope governor on everything else |
-| 3 | Pillar 1 (Blank Line) | Total input freedom — but it must land on authored consequence (defers to P2) |
-| 4 | Pillar 5 (Specialists) | Class divergence is core to the pitch but multiplies P2×P4 cost; model as a filter |
-| 5 | Pillar 3 (Decisive Move) | The combat/encounter shape; non-negotiable in feel but most locally scoped |
+| 1 | Pillar 2 (Translation) | The authored-consequence thesis is the moat |
+| 2 | Pillar 6 (Scene Is a Model) | The authoring mechanism that makes P2 affordable at scale; defines the content-production model |
+| 3 | Pillar 4 (Same Toys) | The unified primitive; the scope governor on everything else |
+| 4 | Pillar 1 (Blank Line) | Total input freedom — but it must land on authored consequence (defers to P2) |
+| 5 | Pillar 5 (Specialists) | Class divergence is core but multiplies P2×P6 cost; modeled as a lens |
+| 6 | Pillar 3 (Decisive Move) | The encounter shape; non-negotiable in feel but most locally scoped |
 
-**Resolution Process**: identify the tension → consult priority → serve the lower
-pillar partially if it doesn't compromise the higher → otherwise the higher wins →
-document the decision → escalate fundamental conflicts to the creative-director.
-
-**Key known tensions** (intentional): P1 (infinite input) vs P2 (authored
-resolution) is the central productive friction. P4 caps the ambition of P1/P2/P5
-(scope governor). The hardest production cost lives at the **P2 × P4 × P5
-intersection** (per-class authored resolution on a shared, creator-authorable
-primitive) — enter with eyes open.
+**Key tensions** (intentional): P1 (infinite input) vs P2 (authored resolution) is
+the central productive friction. P4 and P6 together govern ambition and cost. The
+hardest production cost lives at the **P2 × P5 × P6 intersection** (per-class
+resolution against a shared, creator-authorable scene model). The **classify-don't-
+score** discipline and the **Scene Linter** are what keep that intersection
+deterministic and testable.
 
 ---
 
 ## Player Motivation Alignment
 
-| Need | Which Pillar Serves It | How |
+| Need | Pillar | How |
 | ---- | ---- | ---- |
-| **Autonomy** | Pillar 1 | Total freedom of input — act in your own words, never a menu |
-| **Competence** | Pillar 3 (+ Pillar 2) | The decisive move rewards skill; freedom feels skillful because it lands on real authored content |
-| **Relatedness** | Pillar 4 | The creator/player loop: you build for, and play, others' worlds |
+| **Autonomy** | Pillar 1 | Total freedom of input |
+| **Competence** | Pillar 3 (+ P2) | The decisive move rewards finding leverage; freedom feels skillful because it lands on authored content |
+| **Relatedness** | Pillar 4 | The creator/player loop: build for, and play, others' worlds |
 
-All three SDT needs are served. ✓
+All three SDT needs served. ✓
 
 ---
 
 ## Reference Games
 
-| Reference | What We Take From It | What We Do Differently | Which Pillar It Validates |
+| Reference | What We Take | What We Do Differently | Validates |
 | ---- | ---- | ---- | ---- |
-| AI Dungeon | Freeform-text agency | Authored events + persistent state, not generative prose | Pillar 1, Pillar 2 |
-| Disco Elysium | Text as the world; identity colors perception | Player writes input instead of choosing menus | Pillar 5 |
-| Parser IF (Zork) | Authored, consequential text world | No fixed verb set — blank line accepts anything | Pillar 1, Pillar 2 |
-| Slay the Spire | The decisive-move / perfect-solution feel | Expressed via freeform intent, not a card hand | Pillar 3 |
-| Tabletop RPGs | "Try anything"; specialist classes | Authored & repeatable, not human-DM improv | Pillar 2, Pillar 5 |
-
-**Non-game inspirations**: illuminated manuscripts and marginalia; the typewriter and
-the terminal; the ritual weight of the written word.
+| AI Dungeon | Freeform-text agency | Authored events + persistent state | P1, P2 |
+| Disco Elysium | Text as the world; identity colors perception | Player writes input | P5 |
+| Parser IF (Zork) | Authored, consequential text world | No fixed verb set | P1, P2 |
+| Slay the Spire | The decisive-move feel | Freeform intent against a scene model | P3 |
+| Tabletop RPGs | "Try anything"; specialist classes | Authored & repeatable | P2, P5, P6 |
 
 ---
 
 ## Pillar Validation Checklist
-- [x] **Count**: 5 pillars
-- [x] **Falsifiable**: each makes a claim that could fail a real decision
+- [x] **Count**: 6 pillars
+- [x] **Falsifiable**: each could fail a real decision
 - [x] **Constraining**: each forces a "no" to plausible features
 - [x] **Cross-departmental**: each has design/art/audio/narrative/engineering implications
 - [x] **Design-tested**: each has a concrete design test
-- [x] **Anti-pillars defined**: 4 explicit "this game is NOT" statements
+- [x] **Anti-pillars defined**: 5 explicit "this game is NOT" statements
 - [x] **Priority-ranked**: conflict order established
 - [x] **MDA-aligned**: pillars deliver Discovery/Expression/Challenge
 - [x] **SDT coverage**: Autonomy (P1), Competence (P3), Relatedness (P4)
-- [x] **Memorable**: five sharp, nameable pillars
+- [x] **Memorable**: six sharp, nameable pillars
 - [x] **Core fantasy served**: every pillar traces to the blank line
 
 ---
