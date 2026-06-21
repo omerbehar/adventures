@@ -82,20 +82,22 @@
 <!-- Read by /code-review, /architecture-decision, /architecture-review, and team skills -->
 <!-- to know which specialist to spawn for engine-specific validation. -->
 
-<!-- NOTE: No dedicated Flutter specialist exists in the agent roster. Route to the closest -->
-<!-- domain expert per file type. lead-programmer handles Flutter architecture and idiom review. -->
+<!-- flutter-specialist is the project-tailored engine authority (.claude/agents/flutter-specialist.md), -->
+<!-- version-aware against docs/engine-reference/flutter/. It coordinates the domain programmers below. -->
 
-- **Primary**: lead-programmer (Flutter architecture, cross-cutting code review, pub/pubspec management)
+- **Primary**: flutter-specialist (Flutter/Dart architecture, version-aware idiom review, pub/pubspec, cross-platform export)
 - **UI/Widget Specialist**: ui-programmer (all Flutter widget code, screens, navigation, layout)
 - **Gameplay/Logic Specialist**: gameplay-programmer (Resolver, Scene Model evaluation, StateDelta, game state)
 - **Service Integration**: network-programmer (HTTP client, Translator API calls, embedding retrieval, async flows)
 - **Visual/Animation Specialist**: technical-artist (CustomPainter, animations, the translation-moment visual beat)
-- **Routing Notes**: Invoke lead-programmer for architecture decisions and Flutter idiom review.
-  Invoke ui-programmer for all Widget hierarchy, Navigation 2.0, screen layout, and input handling.
-  Invoke gameplay-programmer for the core game logic: Resolver, CapabilityTranslator, SceneModel,
-  and StateDelta schema. Invoke network-programmer for all service API calls, async data flows,
-  and the Tier 2/3 Translator service integration. Invoke technical-artist for the translation-moment
-  visual beat and any CustomPainter / animation work.
+- **Routing Notes**: Invoke flutter-specialist for engine/architecture decisions, the pure-Dart-core
+  vs. widget vs. service boundary, Flutter 3.44 / Dart 3.12 idiom review, and any version-uncertain API.
+  It coordinates with (and delegates implementation to) the domain agents: ui-programmer for Widget
+  hierarchy, Navigation 2.0, screen layout, and input handling; gameplay-programmer for the core game
+  logic (Resolver, CapabilityTranslator, SceneModel, StateDelta schema); network-programmer for all
+  service API calls, async data flows, and the Tier 2/3 Translator integration; technical-artist for
+  the translation-moment visual beat and any CustomPainter / animation work. Escalate architecture
+  conflicts to lead-programmer and version/dependency decisions to technical-director.
 
 ### File Extension Routing
 
@@ -107,5 +109,5 @@
 | Game logic files (`lib/game/`, `lib/resolver/`, `lib/scene/`) | gameplay-programmer |
 | Service/API files (`lib/services/`, `lib/api/`) | network-programmer |
 | Rendering/animation files (`lib/rendering/`) | technical-artist |
-| `pubspec.yaml`, `.dart_tool/`, project config | lead-programmer |
-| General architecture review | lead-programmer |
+| `pubspec.yaml`, `.dart_tool/`, project config | flutter-specialist |
+| General architecture review | flutter-specialist |
