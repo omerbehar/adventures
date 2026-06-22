@@ -20,8 +20,13 @@
 - Built: magistrate Scene Model (ADR-0003), Stage A classifier (heuristic stub + Claude
   Haiku strict-tool-use adapter, ADR-0004), deterministic Stage B tables, pure Resolver
   (ADR-0006), stability harness measuring the kill-criterion
-- Status: AWAITING PLAYTEST — deterministic half self-testable offline; the LLM-stability
-  kill-criterion needs a real Claude Haiku run + API key (no endpoint/key in this sandbox).
-  Guide to obtain a key in the prototype README.
-- Verdict: PENDING (PROCEED/PIVOT/KILL decided after a real classifier run)
-- Next: open prototype.html → Stage A = Claude Haiku → Run stability test → fill REPORT.md
+- Status: PLAYTESTED 2026-06-22 with real Claude Haiku (claude-haiku-4-5) via harness.mjs.
+- Verdict: PIVOT. Deterministic half PASS. Stage A axis/channel classification is NOT stable
+  run-to-run (4/5 phrasings gave 2-3 distinct axis labels) — but invokesScandalFacet was 25/25
+  stable. Outcome looked stable only by degenerate collapse (all losing); flips where a win is
+  possible. Decisive move rarely lands (scandal-leverage reads as intimidation, Diplomat weak).
+  Op note: strict-tool grammar 400 "Grammar compilation timed out" under repeated calls.
+- Fix (PIVOT-NOTE.md): key the decisive-move collapse on the reliably-detected facet, not a
+  brittle single primaryAxis; let Stage A name multiple axes (per ADR-0004); add retry for the
+  strict-tool 400. Re-run harness.mjs after the fix.
+- ACTION FOR USER: the API key was pasted into chat — ROTATE/REVOKE it in the Console.

@@ -1,6 +1,6 @@
 # Prototype Report: intent-translation (the magistrate)
 
-> **Date:** 2026-06-22 · **Path:** HTML · **Status:** ⏳ AWAITING PLAYTEST (real classifier run)
+> **Date:** 2026-06-22 · **Path:** HTML + headless harness · **Status:** ✅ PLAYTESTED (real Claude Haiku run) · **Verdict: PIVOT**
 
 ## Hypothesis
 
@@ -30,32 +30,52 @@ the decisive-move threshold does not flip.
   will show how often players phrase the decisive move as a threat.
 
 ### The real bet (Stage A stability) — KILL-CRITERION
-- **Status:** ⏳ NOT YET MEASURED. Requires running the harness with Stage A = Claude Haiku
-  and a real API key (see `README.md`). This environment had no key/endpoint available, so
-  the number that decides PROCEED/PIVOT/KILL has not been produced.
-- **To complete:** open `prototype.html`, switch Stage A to Claude Haiku, N=20, "Scandal
-  already discovered", **Run stability test**, and record the Stable % per phrasing below.
+- **Measured 2026-06-22** with Claude Haiku (`claude-haiku-4-5`), strict tool use, via
+  `harness.mjs` (PROBE=5, N=20, class=diplomat, state=known).
 
-| Phrasing | Stable % | Outcomes | Verdict |
-|---|---|---|---|
-| _(fill from a real run)_ | | | |
+**Stage A classification is NOT stable run-to-run at the axis/channel/ordinal level.**
+Probe (5× per phrasing): 4 of 5 phrasings produced 2–3 *different* `(axis/channel/ordinal)`
+classifications. The same sentence "I let slip that the scandal… could become public" was
+labelled social, force, AND stealth across three runs. Only one phrasing was single-valued.
+
+**BUT the leverage facet was detected with 100% stability** — `invokesScandalFacet: true`
+in **every one of the 25 classifications**, across all phrasings and all axis disagreements.
+The model is reliable about *what leverage is invoked*; it is unreliable about *which scalar
+axis* the action is.
+
+**Outcome stability was misleading.** The N=20 run showed 100% for the first phrasings — but
+only because every divergent classification happens to map to `advance` (a *loss* of the
+decisive move) for the Diplomat: scandal-leverage reads as intimidation/deception, where the
+Diplomat is weak (×0.6), so nothing clears a win threshold. Where a *winning* classification
+was possible (phrasing 5, "I calmly mention the gold…": persuasion 1/5 → win, insight 4/5 →
+advance), the outcome flips → ~80% → UNSTABLE. So the decisive move both (a) rarely lands and
+(b) when it can, depends on a coin-flip axis label.
+
+**Operational finding:** the N=20 run aborted at phrasing 3 with `API 400: Grammar
+compilation timed out` — strict-tool-use grammar compilation intermittently times out under
+repeated calls. Needs retry/backoff or a non-strict + repair path (relevant to ADR-0007).
 
 ## Best / worst / surprise
+- **Best:** facet recognition (`invokesScandalFacet`) was rock-solid (100%/25) — the model is
+  dependable at naming *leverage*, which is the part the decisive move actually needs.
+- **Worst:** single-axis classification is genuinely noisy for social intent — the exact
+  variance the concept feared, and it silently produced "stable" losing outcomes.
+- **Surprise:** the scene masked the instability. Stability-by-degenerate-collapse (everything
+  fails the same way) looked like a PASS until the probe exposed the underlying variance.
 
-_To be captured during the real playtest (see `/prototype` Phase 6 questions)._
+## Verdict: PIVOT
 
-## Verdict
-
-**PENDING.** Decision rule:
-- **PROCEED** if every phrasing holds ≥95% on the Claude classifier — the core bet survives
-  this scene; move to finalize design + architecture per the concept's Path B.
-- **PIVOT** if outcomes flip run-to-run — tune ordinal granularity / Stage B tables / the
-  classify prompt and re-measure before any content spend.
-- **KILL** only after repeated PIVOTs fail to stabilize the decisive-move threshold.
+The core idea is sound, but the **first mechanization of classify-don't-score is not stable
+enough** and the decisive-move mapping is wrong. Do not spend on content yet. The fix is
+specific and cheap (see `PIVOT-NOTE.md`):
+1. **Key the decisive-move collapse on the reliably-detected facet** (`invokesScandalFacet`),
+   not on a brittle single `primaryAxis`/magnitude. The model is stable about the facet.
+2. **Let Stage A name multiple axes** (as ADR-0004 actually envisions), so incidental
+   axis-label variance can't flip the outcome.
+3. Add retry/backoff (or non-strict + repair) for the strict-tool grammar 400.
+Re-run this harness after (1)+(2) before re-deciding.
 
 ## Notes
-
-- The deterministic half being trivially stable is the *point* of classify-don't-score: it
-  quarantines all run-to-run variance into Stage A, where this harness can measure it.
-- Heuristic-stub mode always reports 100% — it validates plumbing and enables offline play,
-  but is not evidence about the LLM bet.
+- The deterministic half (Stage B + Resolver) ran PASS headlessly — classify-don't-score did
+  correctly quarantine all variance into Stage A, which is exactly where the harness caught it.
+- Heuristic-stub mode reports 100% by construction — plumbing only, not evidence about the bet.

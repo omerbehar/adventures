@@ -166,5 +166,18 @@ async function stability() {
     const d = discoveryThenDecisive(cls);
     console.log(`  ${cls.padEnd(9)} revealed=${JSON.stringify(d.revealed)}  decisive-move -> ${d.decisiveOutcome}${d.decisive?" (threshold collapsed)":""}`);
   }
+  if (process.env.PROBE && MODE === "claude") {
+    const P = parseInt(process.env.PROBE) || 5;
+    console.log(`\n# Stage A probe — raw classifications (${P}x per phrasing, Haiku)`);
+    for (const phrasing of CORPUS) {
+      const seen = {};
+      for (let i=0;i<P;i++) {
+        const c = await classify(phrasing);
+        const sig = `${c.primaryAxis}/${c.socialChannel}/${c.ordinal}/scandal=${c.invokesScandalFacet}`;
+        seen[sig] = (seen[sig]||0)+1;
+      }
+      console.log(`  ${phrasing}\n      ${JSON.stringify(seen)}`);
+    }
+  }
   await stability();
 })();

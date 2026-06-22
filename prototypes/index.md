@@ -6,7 +6,7 @@ The project's record of what was prototyped and what was learned.
 
 | Concept | Date | Path | Verdict | Report |
 |---|---|---|---|---|
-| intent-translation (the magistrate) | 2026-06-22 | HTML | ⏳ Pending (needs real classifier run) | [REPORT](intent-translation-concept/REPORT.md) |
+| intent-translation (the magistrate) | 2026-06-22 | HTML | 🔁 PIVOT (real Haiku run) | [REPORT](intent-translation-concept/REPORT.md) · [PIVOT](intent-translation-concept/PIVOT-NOTE.md) |
 
 ## Notes
 
