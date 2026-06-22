@@ -17,9 +17,17 @@ the decisive-move threshold does not flip.
 ## Results
 
 ### Deterministic half (Stage B + Resolver)
-- **Status:** built; provable via the in-page "Stage B determinism self-test" (1000 runs →
-  identical vector). By construction the scorer and resolver use no clocks/RNG/IO, so this
-  is expected to PASS. *(Confirm by clicking the button.)*
+- **Status: PASS — ran headlessly 2026-06-22** via `node harness.mjs` (no key required):
+  - Stage B determinism: PASS for all three classes (1000 runs each → byte-identical vector).
+  - Class divergence (Pillar 5): same classification → Diplomat 21=win, Scholar 15=win
+    (collapsed threshold), Assassin 9=advance (not a persuader). Working as designed.
+  - Decisive-move mechanic: discover → reveal `scandal_known` → leverage → threshold
+    collapses → win (Diplomat/Scholar). Working.
+- **Design signal surfaced:** a *threat-framed* decisive move ("if he convicts me, everyone
+  hears how he was paid off") routed to intimidation (Diplomat weak there) and did NOT win.
+  Candidate fixes for later: apply the `IfFacet` collapse to intimidation too, or have
+  Stage A treat "invokes scandal" as dominant regardless of tone. The real classifier run
+  will show how often players phrase the decisive move as a threat.
 
 ### The real bet (Stage A stability) — KILL-CRITERION
 - **Status:** ⏳ NOT YET MEASURED. Requires running the harness with Stage A = Claude Haiku
