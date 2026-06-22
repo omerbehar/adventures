@@ -1,0 +1,493 @@
+<!doctype html>
+<!--
+  PROTOTYPE - NOT FOR PRODUCTION
+  Question: Does classify-don't-score keep the magistrate scene's decisive-move
+            threshold STABLE run-to-run? (the concept's prototype kill-criterion)
+  Date: 2026-06-22
+
+  Throwaway build. Hardcoded values, no error handling beyond the minimum, no
+  architecture. Mirrors ADR-0004 (classify-don't-score Translator) and ADR-0006
+  (deterministic Resolver) closely enough that learnings transfer; it is NOT the
+  production code and must never be imported by it.
+
+  Stage A (classify) = LLM names axis/channel/coarse-ordinal + whether the action
+  invokes the scandal leverage. Stage B (score) = deterministic JS tables compute
+  the magnitude. The LLM NEVER emits a number. The Resolver matches the vector
+  against authored conditional thresholds and fires an authored outcome — never
+  generated prose (narration is keyed).
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Adventures — intent-translation prototype (the magistrate)</title>
+<style>
+  :root { --ink:#1c1a16; --paper:#f4f1ea; --gold:#b8860b; --dim:#6b6256; --bad:#8a2b2b; --good:#2b6a3a; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--paper); color:var(--ink);
+         font:15px/1.5 ui-serif, Georgia, "Times New Roman", serif; }
+  header { padding:14px 20px; border-bottom:1px solid #ddd6c8; }
+  header h1 { margin:0; font-size:18px; letter-spacing:.3px; }
+  header p { margin:4px 0 0; color:var(--dim); font-size:13px; }
+  main { display:grid; grid-template-columns:1fr 1fr; gap:0; }
+  @media (max-width:900px){ main{ grid-template-columns:1fr; } }
+  section { padding:16px 20px; border-right:1px solid #ddd6c8; }
+  h2 { font-size:13px; text-transform:uppercase; letter-spacing:.08em; color:var(--dim); margin:0 0 10px; }
+  .panel { background:#fbf9f3; border:1px solid #e6e0d2; border-radius:6px; padding:12px; margin-bottom:14px; }
+  label { display:block; font-size:12px; color:var(--dim); margin:8px 0 2px; }
+  input[type=text], input[type=password], select, textarea {
+    width:100%; padding:7px 9px; border:1px solid #cfc8b8; border-radius:5px;
+    background:#fff; font:inherit; font-size:13px; }
+  textarea { font-family:ui-monospace, monospace; font-size:12px; }
+  button { font:inherit; font-size:13px; padding:7px 14px; border:1px solid var(--ink);
+           background:var(--ink); color:var(--paper); border-radius:5px; cursor:pointer; }
+  button.ghost { background:transparent; color:var(--ink); }
+  button:disabled { opacity:.45; cursor:default; }
+  .row { display:flex; gap:8px; align-items:center; }
+  .row > * { flex:1; }
+  #log { min-height:160px; max-height:320px; overflow:auto; }
+  .beat { margin:0 0 10px; padding-bottom:10px; border-bottom:1px dashed #e0d9c8; }
+  .beat .you { color:var(--dim); font-style:italic; }
+  .beat .gold { color:var(--gold); font-weight:600; }
+  .beat .win { color:var(--good); font-weight:700; }
+  .beat .lose { color:var(--bad); font-weight:700; }
+  .beat code { font-family:ui-monospace,monospace; font-size:11px; color:var(--dim); }
+  .state { font-family:ui-monospace,monospace; font-size:12px; }
+  .meter { height:8px; background:#e6e0d2; border-radius:4px; overflow:hidden; margin:2px 0 8px; }
+  .meter > div { height:100%; background:var(--bad); }
+  table { width:100%; border-collapse:collapse; font-size:12px; }
+  th,td { text-align:left; padding:4px 6px; border-bottom:1px solid #e6e0d2; }
+  th { color:var(--dim); font-weight:600; }
+  .pass { color:var(--good); font-weight:700; }
+  .fail { color:var(--bad); font-weight:700; }
+  .warn { color:var(--gold); }
+  .tiny { font-size:11px; color:var(--dim); }
+  .blank { display:flex; gap:8px; margin-top:6px; }
+  .blank input { flex:1; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Adventures — the magistrate <span class="tiny">· intent-translation prototype</span></h1>
+  <p>You stand accused before Magistrate Vorne. Type, in your own words, how you get yourself acquitted.</p>
+</header>
+
+<main>
+  <!-- LEFT: configuration + the playable scene -->
+  <section>
+    <h2>Setup</h2>
+    <div class="panel">
+      <div class="row">
+        <div>
+          <label>Classifier (Stage A)</label>
+          <select id="mode">
+            <option value="heuristic">Heuristic stub (offline, no key)</option>
+            <option value="claude">Claude Haiku (real test)</option>
+          </select>
+        </div>
+        <div>
+          <label>Specialist class (Pillar 5)</label>
+          <select id="cls">
+            <option value="diplomat">Diplomat</option>
+            <option value="assassin">Assassin</option>
+            <option value="scholar">Scholar</option>
+          </select>
+        </div>
+      </div>
+      <div id="keywrap" style="display:none">
+        <label>Anthropic API key <span class="tiny">(in-memory only — never stored, sent only to api.anthropic.com; local dev only)</span></label>
+        <input type="password" id="key" placeholder="sk-ant-..." autocomplete="off" />
+        <label>Model</label>
+        <input type="text" id="model" value="claude-haiku-4-5" />
+      </div>
+    </div>
+
+    <h2>The scene</h2>
+    <div class="panel">
+      <div id="log"></div>
+      <div class="blank">
+        <input type="text" id="say" placeholder="What do you do? (e.g. &quot;I remind him I know about the bribes&quot;)" />
+        <button id="submit">Act</button>
+      </div>
+      <div style="margin-top:8px"><button class="ghost" id="reset">Reset scene</button></div>
+    </div>
+
+    <h2>World state</h2>
+    <div class="panel state" id="world"></div>
+  </section>
+
+  <!-- RIGHT: the kill-criterion harness -->
+  <section style="border-right:none">
+    <h2>Stability harness <span class="tiny">— the kill-criterion</span></h2>
+    <div class="panel">
+      <p class="tiny" style="margin-top:0">
+        For each phrasing below, Stage A runs <b id="nlbl">20</b>× → Stage B → Resolver, against a fixed
+        world state. Reports how often the same outcome recurs. <b>PASS = same decisive-move
+        outcome ≥ 95% of runs.</b> Heuristic mode is deterministic (always 100%); the real test
+        needs the Claude classifier.
+      </p>
+      <div class="row">
+        <div>
+          <label>Runs per phrasing (N)</label>
+          <input type="text" id="n" value="20" />
+        </div>
+        <div>
+          <label>Fixed world state</label>
+          <select id="harnessState">
+            <option value="known">Scandal already discovered (decisive move live)</option>
+            <option value="unknown">Scandal not yet discovered</option>
+          </select>
+        </div>
+      </div>
+      <label>Phrasings — the cold-playtester acceptance bar (~5 natural first attempts at the decisive move)</label>
+      <textarea id="corpus" rows="6">I remind him, quietly, that I know about the bribes he took
+I let slip that the scandal about his vault could become public
+If he convicts me, everyone hears how he was paid off
+I hint that his corruption need not come to light
+I calmly mention the gold that changed hands in his chambers</textarea>
+      <div class="row" style="margin-top:10px">
+        <button id="runHarness">Run stability test</button>
+        <button class="ghost" id="runDet">Stage B determinism self-test</button>
+      </div>
+    </div>
+
+    <div class="panel" id="results" style="display:none">
+      <h2 style="margin-top:0">Results</h2>
+      <div id="verdict"></div>
+      <table id="resultsTable"><thead><tr>
+        <th>Phrasing</th><th>Stable %</th><th>Outcomes (count)</th><th>Verdict</th>
+      </tr></thead><tbody></tbody></table>
+      <p class="tiny" id="detResult"></p>
+    </div>
+
+    <h2>What this proves</h2>
+    <div class="panel tiny">
+      <p style="margin-top:0"><b>Deterministic half (provable offline now):</b> Stage B tables + the
+      Resolver are pure — same classification → identical vector → identical outcome, every run.</p>
+      <p><b>The real bet (needs the Claude classifier):</b> does Stage A classify the same argument
+      into the same axis/ordinal often enough that the decisive-move threshold never flips? That is the
+      number the <span class="warn">Stable %</span> column measures.</p>
+    </div>
+  </section>
+</main>
+
+<script>
+/* ===================================================================
+   PROTOTYPE - NOT FOR PRODUCTION
+   Capability Ontology (closed subset) — mirrors ADR-0002.
+   =================================================================== */
+const ORDINALS = ["none","minor","moderate","major","extreme"];
+const ORDINAL_BASE = { none:0, minor:15, moderate:30, major:50, extreme:75 }; // ADR-0002 magnitude scale 0..100
+
+// Stage B class-coloring tables (Pillar 5). Deterministic multipliers per axis/channel.
+const CLASS_TABLES = {
+  diplomat: { persuasion:1.4, intimidation:0.6, deception:1.0, rapport:1.3, insight:1.0, force:0.6, stealth:0.8, loreArcane:1.0 },
+  assassin: { persuasion:0.6, intimidation:1.5, deception:1.2, rapport:0.6, insight:1.0, force:1.3, stealth:1.4, loreArcane:0.8 },
+  scholar:  { persuasion:1.0, intimidation:0.7, deception:1.0, rapport:1.0, insight:1.5, force:0.6, stealth:0.9, loreArcane:1.4 },
+};
+
+/* ===================================================================
+   The Scene Model (frozen) — mirrors ADR-0003. Authored, not generated.
+   The leverage facet `scandal_known` collapses the persuade threshold:
+   the DECISIVE MOVE (Pillar 3) = invoke the scandal once it is known.
+   =================================================================== */
+const SCENE = {
+  thresholds: { persuadeBase:35, persuadeCollapsed:15, intimidate:40, discover:25 },
+  meters:     { suspicion:{ min:0, max:100, initial:0 } },
+  reactive:   { suspicionLockdown:60 },           // >= -> magistrate calls guards (lose)
+  narration: {  // authored keys, never generated prose (Pillar 2)
+    acquit:     "Vorne's jaw tightens. “The charges… are dismissed. Get out.”",
+    acquitLoud: "Vorne flinches, then waves you off — but his clerk is already scribbling a note.",
+    reveal:     "You recall the rumor: gold changed hands in Vorne's chambers last winter. He fears the scandal.",
+    lockdown:   "“GUARDS!” Vorne's nerve breaks. The doors slam. You will not talk your way out now.",
+    nudge:      "Vorne studies you, unmoved. That did not land.",
+  },
+};
+
+/* ===================================================================
+   ThresholdExpr (sealed-style) — mirrors ADR-0003. Resolver evaluates it.
+   =================================================================== */
+const AxisAtLeast = (key, mag) => ({ kind:"AxisAtLeast", key, mag });
+const IfFacet = (cond, thenE, elseE) => ({ kind:"IfFacet", cond, thenE, elseE });
+
+/* ===================================================================
+   STAGE B (score) — deterministic, pure. ADR-0004 criterion:
+   same Classification + class + scene -> identical CapabilityVector.
+   The LLM never runs here.
+   =================================================================== */
+function scoreStageB(classification, cls) {
+  const axis = classification.primaryAxis;
+  const channel = axis === "social" ? classification.socialChannel : axis;
+  const base = ORDINAL_BASE[classification.ordinal] ?? 0;
+  const mult = (CLASS_TABLES[cls] && CLASS_TABLES[cls][channel]) ?? 1;
+  const magnitude = Math.floor(base * mult);
+  const key = axis === "social" ? "social." + classification.socialChannel : axis;
+  return {
+    magnitudes: { [key]: magnitude },
+    invokesScandal: !!classification.invokesScandalFacet,
+    target: classification.target || "magistrate",
+    classId: cls,
+  };
+}
+
+/* ===================================================================
+   RESOLVER — pure, deterministic, per-beat. Mirrors ADR-0006.
+   Returns a StateDelta-shaped result; narration is an authored key.
+   =================================================================== */
+function evalThreshold(expr, vector, worldFacets) {
+  switch (expr.kind) {
+    case "AxisAtLeast":
+      return (vector.magnitudes[expr.key] ?? 0) >= expr.mag;
+    case "IfFacet": {
+      const live = expr.cond(vector, worldFacets);
+      return evalThreshold(live ? expr.thenE : expr.elseE, vector, worldFacets);
+    }
+  }
+  return false;
+}
+
+function resolve(world, vector) {
+  // scandal_leveraged = the facet is known AND this action invokes it (the decisive move)
+  const scandalLeveraged = world.facets.has("scandal_known") && vector.invokesScandal;
+
+  // PATH P1 — persuade (conditional-threshold collapse = the decisive move)
+  const persuade = IfFacet(
+    () => scandalLeveraged,
+    AxisAtLeast("social.persuasion", SCENE.thresholds.persuadeCollapsed),
+    AxisAtLeast("social.persuasion", SCENE.thresholds.persuadeBase),
+  );
+  // PATH P2 — intimidate (loud: side-effect +suspicion)
+  const intimidate = AxisAtLeast("social.intimidation", SCENE.thresholds.intimidate);
+  // PATH P3 — discover (insight reveals the leverage facet; not a win)
+  const discover = AxisAtLeast("insight", SCENE.thresholds.discover);
+
+  // Authored priority order (ADR-0006 total order).
+  if (evalThreshold(persuade, vector, world.facets)) {
+    return { ops:[{op:"Outcome", result:"win"}], outcome:"win", narrationKey:"acquit",
+             decisive: scandalLeveraged };
+  }
+  if (evalThreshold(intimidate, vector, world.facets)) {
+    const next = applyMeter(world, "suspicion", 30);
+    if (next.meters.suspicion >= SCENE.reactive.suspicionLockdown)
+      return { ops:[{op:"AdjustMeter",meter:"suspicion",delta:30},{op:"Outcome",result:"lose"}],
+               outcome:"lose", narrationKey:"lockdown", meters:next.meters };
+    return { ops:[{op:"AdjustMeter",meter:"suspicion",delta:30},{op:"Outcome",result:"win"}],
+             outcome:"win", narrationKey:"acquitLoud", meters:next.meters };
+  }
+  if (evalThreshold(discover, vector, world.facets) && !world.facets.has("scandal_known")) {
+    return { ops:[{op:"RevealFacet",key:"scandal_known"}], outcome:"advance", narrationKey:"reveal",
+             reveal:"scandal_known" };
+  }
+  return { ops:[], outcome:"advance", narrationKey:"nudge" };
+}
+
+function applyMeter(world, meter, delta) {
+  const spec = SCENE.meters[meter];
+  const v = Math.max(spec.min, Math.min(spec.max, (world.meters[meter] ?? spec.initial) + delta));
+  return { meters: { ...world.meters, [meter]: v } };
+}
+
+/* ===================================================================
+   STAGE A (classify) — evaluative. Two implementations behind one
+   interface (ADR-0004 IntentClassifier): a heuristic stub for offline
+   play/determinism, and the real Claude (Haiku) call for the kill-test.
+   Returns ONLY a Classification (no magnitude).
+   =================================================================== */
+
+// (a) Heuristic stub — deterministic keyword classifier. NOT a real stability
+// test (it can't vary), but lets the scene be played offline and proves the
+// deterministic half end-to-end.
+function classifyHeuristic(text) {
+  const t = text.toLowerCase();
+  const scandal = /(bribe|scandal|corrupt|paid off|gold|payoff|expose|public|came? to light)/.test(t);
+  let primaryAxis = "social", socialChannel = "persuasion";
+  if (/(threaten|or else|convict me|everyone hears|make him|force)/.test(t)) socialChannel = "intimidation";
+  else if (/(lie|pretend|trick|deceive|forge)/.test(t)) socialChannel = "deception";
+  if (/(what do i know|recall|remember|ask|reputation|rumou?r|learn|investigate)/.test(t)) {
+    primaryAxis = "insight"; socialChannel = "none";
+  }
+  let ordinal = "moderate";
+  if (/(quietly|hint|let slip|gently|calmly|mention)/.test(t)) ordinal = "minor";
+  if (/(everyone|publicly|ruin|destroy|expose|loudly|all of)/.test(t)) ordinal = "major";
+  return { primaryAxis, socialChannel, ordinal, invokesScandalFacet: scandal, target:"magistrate" };
+}
+
+// (b) Real Stage A — Claude Haiku via strict tool use. Structured output is
+// guaranteed by the tool schema; the model NAMES, it does not score.
+const CLASSIFY_TOOL = {
+  name: "classify_intent",
+  description: "Classify a player's freeform action in a social courtroom scene. " +
+    "NAME which capability axis it invokes, a coarse ordinal of intensity, and whether it " +
+    "invokes the leverage that the magistrate took bribes. Do NOT output any numeric magnitude.",
+  strict: true,
+  input_schema: {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      primaryAxis: { type:"string", enum:["social","insight","force","stealth","loreArcane"],
+        description:"The dominant capability axis the action invokes." },
+      socialChannel: { type:"string", enum:["persuasion","intimidation","deception","rapport","none"],
+        description:"If primaryAxis is social, which channel; otherwise 'none'." },
+      ordinal: { type:"string", enum:["none","minor","moderate","major","extreme"],
+        description:"Coarse intensity of the action. Quiet hint=minor; public threat=major." },
+      invokesScandalFacet: { type:"boolean",
+        description:"True if the action references/threatens the magistrate's bribes or the scandal." },
+      target: { type:"string", description:"Who the action targets (usually 'magistrate')." },
+    },
+    required:["primaryAxis","socialChannel","ordinal","invokesScandalFacet","target"],
+  },
+};
+
+async function classifyClaude(text, key, model) {
+  const sys = "You are the classify stage of a deterministic game Translator (classify-don't-score). " +
+    "The scene: the player is accused before a corrupt magistrate who secretly took bribes. " +
+    "Classify the player's action with the classify_intent tool. You NAME axis/channel/ordinal and " +
+    "whether the scandal is invoked; you MUST NOT produce any magnitude or decide the outcome.";
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method:"POST",
+    headers:{
+      "content-type":"application/json",
+      "x-api-key":key,
+      "anthropic-version":"2023-06-01",
+      "anthropic-dangerous-direct-browser-access":"true", // local-dev only; exposes the key
+    },
+    body: JSON.stringify({
+      model, max_tokens:512, system:sys,
+      tools:[CLASSIFY_TOOL],
+      tool_choice:{ type:"tool", name:"classify_intent" },
+      messages:[{ role:"user", content:`Player action: "${text}"` }],
+    }),
+  });
+  if (!res.ok) throw new Error("API " + res.status + ": " + (await res.text()).slice(0,300));
+  const data = await res.json();
+  const block = (data.content||[]).find(b => b.type === "tool_use");
+  if (!block) throw new Error("No tool_use block in response");
+  return block.input; // a Classification — no magnitude
+}
+
+async function classify(text) {
+  const mode = el("mode").value;
+  if (mode === "heuristic") return classifyHeuristic(text);
+  const key = el("key").value.trim();
+  if (!key) throw new Error("Enter an API key, or switch Stage A to the heuristic stub.");
+  return classifyClaude(text, key, el("model").value.trim() || "claude-haiku-4-5");
+}
+
+/* ===================================================================
+   UI / playable loop
+   =================================================================== */
+const el = id => document.getElementById(id);
+let world = freshWorld();
+function freshWorld(){ return { facets:new Set(), meters:{ suspicion:SCENE.meters.suspicion.initial } }; }
+
+function renderWorld(){
+  const f = [...world.facets];
+  el("world").innerHTML =
+    `class: <b>${el("cls").value}</b><br>` +
+    `facets: ${f.length ? f.map(x=>`<span class="warn">${x}</span>`).join(", ") : "<span class='tiny'>none</span>"}<br>` +
+    `suspicion: ${world.meters.suspicion}/100` +
+    `<div class="meter"><div style="width:${world.meters.suspicion}%"></div></div>`;
+}
+function logBeat(text, vector, result){
+  const div = document.createElement("div"); div.className="beat";
+  const cls = result.outcome==="win" ? "win" : result.outcome==="lose" ? "lose" : "gold";
+  const decisive = result.decisive ? " <span class='tiny'>(decisive move — threshold collapsed)</span>" : "";
+  div.innerHTML =
+    `<div class="you">› ${escapeHtml(text)}</div>` +
+    `<div class="${cls}">${SCENE.narration[result.narrationKey]}${decisive}</div>` +
+    `<code>${escapeHtml(JSON.stringify(vector.magnitudes))} · invokesScandal=${vector.invokesScandal} · → ${result.outcome}</code>`;
+  el("log").appendChild(div); el("log").scrollTop = el("log").scrollHeight;
+}
+function escapeHtml(s){ return s.replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c])); }
+
+async function act(){
+  const text = el("say").value.trim(); if(!text) return;
+  el("submit").disabled = true;
+  try {
+    const classification = await classify(text);
+    const vector = scoreStageB(classification, el("cls").value);
+    const result = resolve(world, vector);
+    if (result.reveal) world.facets.add(result.reveal);
+    if (result.meters) world.meters = result.meters;
+    logBeat(text, vector, result);
+    el("say").value = "";
+    renderWorld();
+    if (result.outcome === "win" || result.outcome === "lose") el("say").placeholder = "Scene over — Reset to try again.";
+  } catch(e) {
+    const div=document.createElement("div"); div.className="beat";
+    div.innerHTML = `<span class="lose">error:</span> <code>${escapeHtml(e.message)}</code>`;
+    el("log").appendChild(div);
+  } finally { el("submit").disabled = false; }
+}
+
+/* ===================================================================
+   STABILITY HARNESS — measures the kill-criterion.
+   =================================================================== */
+async function runHarness(){
+  const N = Math.max(1, parseInt(el("n").value)||20);
+  const cls = el("cls").value;
+  const phrasings = el("corpus").value.split("\n").map(s=>s.trim()).filter(Boolean);
+  const stateMode = el("harnessState").value;
+  const tbody = el("resultsTable").querySelector("tbody"); tbody.innerHTML="";
+  el("results").style.display="block"; el("verdict").innerHTML="Running…";
+  el("runHarness").disabled = true;
+
+  let allPass = true, anyRun = false;
+  for (const phrasing of phrasings) {
+    const counts = {};
+    for (let i=0;i<N;i++){
+      const w = { facets:new Set(stateMode==="known"?["scandal_known"]:[]), meters:{suspicion:0} };
+      let classification;
+      try { classification = await classify(phrasing); }
+      catch(e){ el("verdict").innerHTML = `<span class="fail">Stopped: ${escapeHtml(e.message)}</span>`;
+                el("runHarness").disabled=false; return; }
+      const vector = scoreStageB(classification, cls);
+      const outcome = resolve(w, vector).outcome;
+      counts[outcome] = (counts[outcome]||0)+1;
+      anyRun = true;
+    }
+    const top = Math.max(...Object.values(counts));
+    const pct = Math.round(100*top/N);
+    const pass = pct >= 95;
+    if (!pass) allPass = false;
+    const tr=document.createElement("tr");
+    tr.innerHTML = `<td>${escapeHtml(phrasing)}</td>`+
+      `<td class="${pass?'pass':'fail'}">${pct}%</td>`+
+      `<td><code>${escapeHtml(JSON.stringify(counts))}</code></td>`+
+      `<td class="${pass?'pass':'fail'}">${pass?'STABLE':'UNSTABLE'}</td>`;
+    tbody.appendChild(tr);
+  }
+  const mode = el("mode").value;
+  el("verdict").innerHTML = !anyRun ? "No phrasings." :
+    mode==="heuristic"
+      ? `<span class="warn">Heuristic mode is deterministic by construction — 100% is expected and proves nothing about the LLM bet. Switch Stage A to Claude Haiku for the real kill-criterion.</span>`
+      : (allPass ? `<span class="pass">PASS — every phrasing's decisive-move outcome held ≥ 95% run-to-run. The core bet survives this scene.</span>`
+                 : `<span class="fail">CONCERN — at least one phrasing flipped outcome run-to-run. The decisive-move threshold is not stable enough yet (tune ordinals/tables, or the classify prompt).</span>`);
+  el("runHarness").disabled = false;
+}
+
+function runDeterminism(){
+  // ADR-0004 criterion: Stage B is deterministic. Same Classification -> identical vector, 1000 runs.
+  const c = { primaryAxis:"social", socialChannel:"persuasion", ordinal:"moderate", invokesScandalFacet:true, target:"magistrate" };
+  const first = JSON.stringify(scoreStageB(c, el("cls").value));
+  let ok = true;
+  for (let i=0;i<1000;i++){ if (JSON.stringify(scoreStageB(c, el("cls").value)) !== first){ ok=false; break; } }
+  el("results").style.display="block";
+  el("detResult").innerHTML = ok
+    ? `<span class="pass">Stage B determinism: PASS</span> — 1000 runs of one classification → identical vector <code>${escapeHtml(first)}</code>.`
+    : `<span class="fail">Stage B determinism: FAIL</span> — output varied (should be impossible).`;
+}
+
+/* wiring */
+el("mode").addEventListener("change", ()=> el("keywrap").style.display = el("mode").value==="claude"?"block":"none");
+el("cls").addEventListener("change", renderWorld);
+el("n").addEventListener("input", ()=> el("nlbl").textContent = el("n").value);
+el("submit").addEventListener("click", act);
+el("say").addEventListener("keydown", e=>{ if(e.key==="Enter") act(); });
+el("reset").addEventListener("click", ()=>{ world=freshWorld(); el("log").innerHTML=""; el("say").placeholder='What do you do? (e.g. "I remind him I know about the bribes")'; renderWorld(); });
+el("runHarness").addEventListener("click", runHarness);
+el("runDet").addEventListener("click", runDeterminism);
+renderWorld();
+</script>
+</body>
+</html>
