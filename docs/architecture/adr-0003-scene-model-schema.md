@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+Accepted
 
 ## Date
 
@@ -33,7 +33,7 @@ and toolkit ship later.
 | **Knowledge Risk** | LOW — pure-Dart immutable models + JSON (de)serialization |
 | **References Consulted** | `docs/engine-reference/flutter/current-best-practices.md` (sealed types, records, pure-Dart-core), `deprecated-apis.md` |
 | **Post-Cutoff APIs Used** | None (manual JSON or codegen decided at implementation time) |
-| **Verification Required** | If JSON codegen is adopted, prefer the Dart 3.12 **macro-based** path (`@JsonSerializable` via stabilized macros) over `build_runner`; confirm null-safety + 3.12 compatibility either way |
+| **Verification Required** | **MVP uses hand-rolled `fromJson`/`toJson`** (zero codegen, zero package risk). Macro-based JSON is **aspirational only**: Dart 3.12 stabilized the *macros language feature*, but a production-ready `@JsonSerializable`-via-macros *package* is not confirmed available — adopting one requires explicit technical-director package approval first (review finding N1). Confirm null-safety + 3.12 compatibility either way |
 
 ## ADR Dependencies
 
@@ -156,7 +156,8 @@ final class FallbackBounds {
 
 final class Entity {
   const Entity({required this.id, required this.type, required this.props});
-  final String id; final String type; final Map<String, Object> props;
+  // PropValue (sealed union, ADR-0001), NOT Object — keeps JSON round-trip type-safe (N4).
+  final String id; final String type; final Map<String, PropValue> props;
 }
 
 final class SolutionPath {
@@ -190,7 +191,8 @@ final class MeterSpec { const MeterSpec({required this.min, required this.max, r
 - JSON is the source-of-truth authoring format (`assets/scenes/*.json`); validate against a schema on load and reject malformed scenes (do not silently coerce).
 - A scene is loaded and validated once, then treated as immutable/frozen at runtime — no per-beat mutation of the model (world *state* lives separately in `WorldState`, defined in ADR-0001).
 - `ThresholdExpr` is a `sealed` tree so the Resolver's evaluation (ADR-0006) is exhaustive. The decisive move (Pillar 3) is mechanically an `IfFacet` that collapses a hard `AxisAtLeast` to a trivial one.
-- Defer the choice of hand-rolled `fromJson` vs. a codegen package to implementation; if codegen is used it must be approved (technical-director) and Dart 3.12-compatible.
+- **`ThresholdExpr` acyclicity / depth bound (review finding N7)**: `IfFacet` is recursive (`thenExpr`/`elseExpr` are themselves `ThresholdExpr`). Schema validation on load MUST enforce a maximum tree depth and reject any structure that cannot be built as a finite acyclic tree, so a malformed scene cannot drive the Resolver into unbounded recursion / stack overflow. The Scene Linter (ADR-0005) carries the same rule for compiled scenes. (This mirrors the acyclicity guarantee ADR-0006 already requires for reactive thresholds.)
+- **JSON (de)serialization**: MVP hand-rolls `fromJson`/`toJson` — no codegen, no package dependency. Macro-based codegen is aspirational and gated on technical-director package approval (see Engine Compatibility, finding N1).
 
 ## Alternatives Considered
 
@@ -254,6 +256,8 @@ Greenfield. The MVP hand-authors Scene Models in this exact format; the Compiler
 - [ ] A conditional threshold (`IfFacet`) correctly collapses a hard requirement when its facet is set
 - [ ] Reactive thresholds fire their `StateDelta` exactly once when a meter crosses
 - [ ] Loading malformed JSON is rejected with actionable errors, never silently coerced
+- [ ] A `ThresholdExpr` exceeding the max depth (or otherwise non-finite) is rejected on load (N7)
+- [ ] `Entity.props` round-trips through JSON with type preserved via `PropValue` (no `Object`) (N4)
 - [ ] Discovery paths emit `RevealFacet` and do not advance to an outcome
 
 ## GDD Requirements Addressed

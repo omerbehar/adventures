@@ -193,3 +193,37 @@ several MED data-typing/determinism refinements to fold in before acceptance.
 1. `client-and-ui-architecture` (Foundation for the presentation/platform layer) — **highest impact**
 2. *(optional, lower priority)* `persistence-and-save`
 3. *(optional)* `eval-harness` — promote the cross-cutting eval/versioning discipline to a tracked decision
+
+---
+
+## Resolution Addendum — 2026-06-22 (same day)
+
+All blocking and refinement items from this review were actioned the same day:
+
+- **ADR-0009 `client-and-ui-architecture` authored** — closes `TR-client-001` (the only confirmed
+  coverage gap). Registry updated: gap → covered. Also resolves finding **N5** (`RouterCascade`
+  behind a DI interface).
+- **Engine-specialist refinements folded into ADR-0001 / ADR-0003 / ADR-0006 / ADR-0007:**
+  - N1 — ADR-0003 macro-JSON **demoted** to aspirational (technical-director package approval
+    required); MVP hand-rolls `fromJson`/`toJson`.
+  - N4 — `PropValue` (sealed String|int|bool|double) **promoted to a first-class type** in ADR-0001;
+    ADR-0003 `Entity.props` and ADR-0001 `WorldState.entityProps`/`SetEntityProp.value` now use it.
+  - N3 — ADR-0001 mandates **immutable-collection discipline** for `WorldState` (unmodifiable views,
+    defensive copies).
+  - N7 — ADR-0003 adds a **`ThresholdExpr` acyclicity / depth gate** at schema-load and in the
+    ADR-0005 Linter, with matching validation criteria.
+  - N8 — ADR-0001 `WorldStateSnapshot` is now a **distinct type**, not a `typedef`.
+  - N6 — ADR-0006 `Resolver` pre-declares an optional **seeded-RNG** constructor parameter.
+- **Integration seams reconciled:** ① `validateDelta` placement documented (scene/validation layer,
+  not `state_delta.dart`) to break the 0001↔0003 type cycle; ② `validateDelta` gains an
+  `enforceBounds` parameter (Tier-3 deltas only) reconciled across ADR-0001/0003/0007;
+  ③ covered by N7.
+- **All 9 ADRs moved `Proposed → Accepted`.**
+
+**Remaining (non-blocking, deferred-acceptable):** `TR-persist-001` (save/persistence ADR — concept
+places basic save at Vertical Slice); `TR-fb-002` (capture privacy policy — owner named in ADR-0008);
+`TR-cfg-001` (eval-harness as a tracked artifact). A human must run `flutter create .` + `flutter pub get`
+once the SDK is available (the scaffold has no platform folders yet).
+
+**Effective post-addendum status: PASS-ready** for `/gate-check pre-production`, subject to the three
+deferred items above being acknowledged as out-of-scope for the gate.
