@@ -1,0 +1,277 @@
+# Architecture Registry — Adventures
+#
+# The canonical index of architectural STANCES established by Accepted/Proposed ADRs:
+# who owns what state, which interface contracts are binding, which patterns are
+# forbidden, and which cross-cutting API decisions are locked.
+#
+# Maintained by /architecture-decision (Step 6). Read by /architecture-decision (to
+# detect contradictions before drafting a new ADR), /code-review, and team skills.
+#
+# RULES:
+#   - Never edit an existing entry's meaning. To change a stance, set the old entry's
+#     status to `superseded_by: ADR-XXXX` and add a new entry.
+#   - Every entry cites its source ADR.
+#   - `status: proposed` mirrors the ADR's own status; promote to `accepted` when the
+#     ADR is Accepted (do this alongside flipping ADR Status).
+#
+# Source: the 8 foundational ADRs in docs/architecture/ (all currently Proposed).
+
+meta:
+  project: Adventures
+  engine: Flutter 3.44.0 / Dart 3.12
+  last_updated: 2026-06-21
+  adr_count: 8
+  note: >
+    All foundational ADRs are Status: Proposed pending /architecture-review in a
+    fresh session. Promote entries to status: accepted when their ADR is Accepted.
+
+# ─────────────────────────────────────────────────────────────────────────────
+# STATE OWNERSHIP — which module owns which mutable/canonical state, and the
+# read/write interface other systems must go through.
+# ─────────────────────────────────────────────────────────────────────────────
+state_ownership:
+  - state: world_state
+    description: All mutable runtime state for an in-progress adventure (current node, meters, set/revealed facets, entity-prop overrides, per-beat state-machine cursors).
+    owner: core/state_delta (lib/game/state_delta.dart)
+    interface: "applyDelta(WorldState, StateDelta) -> WorldState  (pure; returns a new WorldState, never mutates in place)"
+    adr: ADR-0001
+    status: proposed
+
+  - state: scene_model
+    description: The frozen, immutable authored scene (entities, paths, thresholds, meters, reactive thresholds, fallbackBounds). Loaded + validated once, then read-only at runtime.
+    owner: scene (lib/scene/)
+    interface: "SceneModel.fromJson / toJson; read-only traversal at runtime"
+    adr: ADR-0003
+    status: proposed
+
+  - state: capability_ontology
+    description: The closed scalar axis set + canonical magnitude scale (0–100). The single shared vocabulary for thresholds and translator tables.
+    owner: ontology (lib/game/ontology.dart)
+    interface: "enum CapabilityDimension (closed); Ontology(magnitudeMin/Max); CapabilityAxisKey (record) for map/threshold keys"
+    adr: ADR-0002
+    status: proposed
+
+  - state: magnitude_tables
+    description: Versioned deterministic tables mapping (axis, ordinal, class, scene modifiers) -> integer magnitude. The balancing surface.
+    owner: translator (lib/game/translator/)
+    interface: "MagnitudeTables.score(Classification, classId, SceneModifiers) -> CapabilityVector"
+    adr: ADR-0004
+    status: proposed
+
+  - state: turn_budget
+    description: Hard per-turn generative-token + latency ceiling, instrumented from prototype #1. Gates Tier 2/3 escalation.
+    owner: services/router (lib/services/router/)
+    interface: "TurnBudget (consumed by RouterCascade.route)"
+    adr: ADR-0007
+    status: proposed
+
+  - state: fallback_proposal_log
+    description: Append-only record of Tier-3 bounded-fallback resolutions for offline review. Never mutates canonical content.
+    owner: services/router/feedback (lib/services/router/feedback/)
+    interface: "ProposalSink.record(FallbackProposal)  (fire-and-forget; off the critical path)"
+    adr: ADR-0008
+    status: proposed
+
+# ─────────────────────────────────────────────────────────────────────────────
+# INTERFACE CONTRACTS — binding type/method/seam contracts other systems implement
+# against. Changing one of these is a breaking change requiring a superseding ADR.
+# ─────────────────────────────────────────────────────────────────────────────
+interfaces:
+  - name: state_delta
+    contract: "StateDelta = ordered List<StateDeltaOp> (sealed) + optional authored narrationKey. All resolution emits this; never prose."
+    adr: ADR-0001
+    status: proposed
+
+  - name: outcome_result
+    contract: "enum OutcomeResult { escape, win, lose, advance } — the SINGLE source of outcome truth. Resolver derives its reported outcome FROM the applied Outcome op."
+    adr: ADR-0001
+    status: proposed
+
+  - name: capability_axis_key
+    contract: "CapabilityAxisKey = (CapabilityDimension, SocialChannel?)  — a RECORD (value equality). Required key type for axis maps + threshold matching; plain-class keys are forbidden (would break determinism)."
+    adr: ADR-0002
+    status: proposed
+
+  - name: threshold_expr
+    contract: "sealed ThresholdExpr { AxisAtLeast | IfFacet }. IfFacet collapse IS the mechanical decisive move. Matched with object patterns in switch expressions."
+    adr: ADR-0003
+    status: proposed
+
+  - name: fallback_bounds
+    contract: "SceneModel.fallbackBounds : FallbackBounds (touchableFacets, touchableMeters, maxMeterDelta, allowOutcome). The concrete meaning of 'creator bounds' for Tier-3 validation."
+    adr: ADR-0003
+    status: proposed
+
+  - name: capability_vector
+    contract: "CapabilityVector { Map<CapabilityAxisKey,int> magnitudes, target, classId }. Produced by Stage B (deterministic), consumed by the Resolver. The LLM never produces magnitudes."
+    adr: ADR-0004
+    status: proposed
+
+  - name: intent_classifier
+    contract: "IntentClassifier.classify(text, ctx) -> Classification (axis ordinals + tactics + facetsInvoked; NO magnitudes). Service-side, behind DI."
+    adr: ADR-0004
+    status: proposed
+
+  - name: scene_linter
+    contract: "SceneLinter.lint(SceneModel) -> LintReport. Deterministic, pure Dart. A scene may only freeze to canonical after it passes + a human bulk-approves."
+    adr: ADR-0005
+    status: proposed
+
+  - name: resolver
+    contract: "Resolver.resolve(WorldState, CapabilityVector) -> ResolveResult (sealed: Resolved | NoMatch). Pure, deterministic, per-beat. NoMatch hands off to the cascade."
+    adr: ADR-0006
+    status: proposed
+
+  - name: router_cascade
+    contract: "RouterTier.attempt -> RouteOutcome (Routed | Classified | Proposed | Pass). Cascade stops at first confident tier. Tier-2 Classified is scored client-side (Stage B) before the Resolver."
+    adr: ADR-0007
+    status: proposed
+
+  - name: fallback_proposal
+    contract: "FallbackProposal { intentText, nodeId, WorldStateSnapshot, classId, StateDelta, capturedAt='<sceneId>:<beat>@<sceneVersion>' }. Capture-only; never promotes at runtime."
+    adr: ADR-0008
+    status: proposed
+
+# ─────────────────────────────────────────────────────────────────────────────
+# FORBIDDEN PATTERNS — the proposed approach in any new ADR must NOT use these.
+# Mirrors technical-preferences.md "Forbidden Patterns" plus ADR-derived bans.
+# ─────────────────────────────────────────────────────────────────────────────
+forbidden_patterns:
+  - pattern: resolution_emits_prose
+    rule: "Resolution (Resolver or bounded fallback) must never emit generative prose — output is a validated StateDelta + authored narrationKey."
+    adr: ADR-0001
+    status: proposed
+
+  - pattern: apply_unvalidated_delta
+    rule: "Never apply a StateDelta without validateDelta passing first (against the scene + ontology, and fallbackBounds for Tier-3)."
+    adr: ADR-0001
+    status: proposed
+
+  - pattern: runtime_axis_coinage
+    rule: "Never coin a new scalar capability axis at runtime. CapabilityDimension is a closed enum; promotion is an editorial ADR act only."
+    adr: ADR-0002
+    status: proposed
+
+  - pattern: class_keyed_axis_map
+    rule: "Never key an axis map (or match a threshold) with the CapabilityAxis object directly — use the CapabilityAxisKey record. Identity equality would silently break Resolver determinism."
+    adr: ADR-0002
+    status: proposed
+
+  - pattern: enumerated_branching_script
+    rule: "Scenes are a model of typed thresholds, never an enumerated decision tree / branch script."
+    adr: ADR-0003
+    status: proposed
+
+  - pattern: silent_json_coercion
+    rule: "Malformed scene JSON must be rejected with actionable errors, never silently coerced."
+    adr: ADR-0003
+    status: proposed
+
+  - pattern: llm_scores_magnitude
+    rule: "The Translator LLM classifies (names axes/tactics + coarse ordinal) only; deterministic tables compute magnitude. The model never emits the final number."
+    adr: ADR-0004
+    status: proposed
+
+  - pattern: offschema_classifier_output
+    rule: "Off-schema classifier output is repaired or rejected, never passed downstream to the Resolver raw."
+    adr: ADR-0004
+    status: proposed
+
+  - pattern: free_running_compiler
+    rule: "The Scene Compiler is constrained by grounding tables + a deterministic Linter; never free-running generation, never in the runtime hot path, never coins axes."
+    adr: ADR-0005
+    status: proposed
+
+  - pattern: realtime_clock_advancement
+    rule: "No real-time clock drives gameplay state. All advancement is per-beat (state-machine); patrols/timers are advanced by moves. No DateTime.now()/unseeded Random in lib/resolver/."
+    adr: ADR-0006
+    status: proposed
+
+  - pattern: iteration_order_dependence
+    rule: "Resolver path selection must be a total order (priority, then declaration index). Never rely on map/set iteration order."
+    adr: ADR-0006
+    status: proposed
+
+  - pattern: per_beat_top_model_call
+    rule: "Never call the top model every beat. The cascade escalates tier-by-tier under a hard token budget; the common case is local (Tier 0/1 + Resolver), offline-capable."
+    adr: ADR-0007
+    status: proposed
+
+  - pattern: serverside_stage_b_scoring
+    rule: "Stage-B magnitude scoring runs client/edge-side, never server-side — this preserves run-to-run threshold stability."
+    adr: ADR-0007
+    status: proposed
+
+  - pattern: js_html_interop_under_wasm
+    rule: "On-device embedding runtimes (Tier 1) must use dart:js_interop + package:web; dart:js / dart:html do not work under the Skwasm/Wasm web build."
+    adr: ADR-0007
+    status: proposed
+
+  - pattern: runtime_canonical_promotion
+    rule: "The runtime never edits frozen/canonical scenes. Fallback proposals are captured offline-gated and only become canonical via the Compiler/Linter/bulk-approve pipeline."
+    adr: ADR-0008
+    status: proposed
+
+  - pattern: capture_blocks_turn
+    rule: "Fallback-proposal capture is fire-and-forget; it must never block or alter the resolved turn."
+    adr: ADR-0008
+    status: proposed
+
+# ─────────────────────────────────────────────────────────────────────────────
+# API / ARCHITECTURE DECISIONS — locked cross-cutting choices.
+# ─────────────────────────────────────────────────────────────────────────────
+api_decisions:
+  - decision: pure_dart_core
+    choice: "Core logic (StateDelta, WorldState, Ontology, SceneModel, Resolver, MagnitudeTables Stage-B) is pure Dart with zero package:flutter imports — runnable client/edge-side and unit-testable headlessly."
+    adr: [ADR-0001, ADR-0002, ADR-0003, ADR-0006]
+    status: proposed
+
+  - decision: two_tier_ontology
+    choice: "Closed scalar dimensions (~12, Social sub-vectored) + open scene-local keyed facets; promotion facet->axis via ADR only."
+    adr: ADR-0002
+    status: proposed
+
+  - decision: scene_format_is_creator_primitive
+    choice: "The Scene Model JSON schema IS the creator-facing primitive (Pillar 4); the same format serves runtime, the Compiler target, and the future toolkit."
+    adr: ADR-0003
+    status: proposed
+
+  - decision: classify_dont_score
+    choice: "Translator splits into Stage A (LLM classify, service-side) + Stage B (deterministic tables, client-side). Stability of the decisive-move threshold is the prototype kill-criterion."
+    adr: ADR-0004
+    status: proposed
+
+  - decision: client_service_split
+    choice: "Client/edge: Tier 0 (exact/cache), Tier 1 (embedding retrieval), Stage-B scoring, and the Resolver. Service: Tier 2 (Haiku disambiguation), Tier 3 (Sonnet bounded fallback). Offline degrades to local tiers + Resolver."
+    adr: ADR-0007
+    status: proposed
+
+  - decision: offline_batch_compiler
+    choice: "Scene Compiler (Opus 4.8) runs offline batch in tools/, never in shipped client code; the deterministic Linter ships earlier (MVP) to harden hand-authored scenes."
+    adr: ADR-0005
+    status: proposed
+
+  - decision: offline_gated_feedback
+    choice: "Tier-3 fallback resolutions are captured at runtime but only become authored content via offline designer review through the Compiler/Linter pipeline."
+    adr: ADR-0008
+    status: proposed
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PERFORMANCE BUDGETS — claimed by ADRs; cross-checked against technical-preferences.md.
+# ─────────────────────────────────────────────────────────────────────────────
+performance_budgets:
+  - budget: resolver_per_beat
+    value: "< ~1ms typical per beat (path eval + apply + reactive fixpoint)"
+    ceiling: "16.6ms frame budget"
+    adr: ADR-0006
+    status: proposed
+
+  - budget: service_round_trip
+    value: "Tier 2/3 <= 2s; optimistic UI rendered immediately"
+    adr: ADR-0007
+    status: proposed
+
+  - budget: hot_path_network
+    value: "ZERO network on the common (Tier 0/1 + Resolver) path; offline-capable"
+    adr: ADR-0007
+    status: proposed
