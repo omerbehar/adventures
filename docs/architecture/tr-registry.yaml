@@ -217,8 +217,8 @@ requirements:
     system: client
     requirement: Cross-platform thin-client architecture (PC/Web/Mobile) — UI/state-mgmt, navigation/router for shareable URLs, translation-moment visual beat, soft-keyboard handling, <5MB initial Wasm bundle
     source: design/gdd/game-concept.md "one portable cross-platform UI layer"; technical-preferences platforms
-    adr: null
-    status: gap   # confirmed real gap 2026-06-22; author /architecture-decision client-and-ui-architecture
+    adr: ADR-0009
+    status: covered   # closed 2026-06-22 by ADR-0009 (client-and-ui-architecture)
   - id: TR-persist-001
     system: persistence
     requirement: Save/persistence architecture beyond StateDelta serialization (session/adventure persistence)
