@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+Accepted
 
 ## Date
 
@@ -141,8 +141,9 @@ final class RouterCascade {
 ### Implementation Guidelines
 
 - Orchestrator in `lib/services/router/`; Tier 0/1 implementations are local (no network), Tier 2/3 are service clients behind DI interfaces — unit tests inject fakes, never hit the live service.
+- **`RouterCascade` itself sits behind a DI interface** (`RouterCascadeInterface`), not consumed as a concrete type by the UI layer (review finding N5; the seam is owned by ADR-0009). This keeps service + resolver dependencies out of the widget tree and lets the UI/providers mock the whole cascade in tests.
 - **Tier 2 → Stage B seam**: a `Classified` outcome from Tier 2 carries only a `Classification`; the orchestrator then runs the **client-side** deterministic `MagnitudeTables.score` (ADR-0004) to produce the `CapabilityVector` before handing it to the Resolver. Scoring never happens server-side — this preserves run-to-run threshold stability.
-- **"Creator bounds" = `SceneModel.fallbackBounds`** (ADR-0003). A Tier-3 `Proposed` delta is applied only if every op stays within `fallbackBounds` (touchable facets/meters, `maxMeterDelta`, `allowOutcome`); `validateDelta` checks this. Out-of-bounds ⇒ graceful authored non-response.
+- **"Creator bounds" = `SceneModel.fallbackBounds`** (ADR-0003). A Tier-3 `Proposed` delta is applied only if every op stays within `fallbackBounds` (touchable facets/meters, `maxMeterDelta`, `allowOutcome`). Enforce this by calling `validateDelta(delta, scene, ontology, enforceBounds: scene.fallbackBounds)` (ADR-0001) — the `enforceBounds` argument is passed ONLY for fallback-originated deltas; authored path effects validate with `enforceBounds: null`. Out-of-bounds ⇒ graceful authored non-response.
 - **Optimistic UI**: render an immediate acknowledgment; reconcile when an escalated tier returns (≤2s budget).
 - **Token budget** is a first-class object, instrumented from the first prototype; on breach, return the authored graceful non-response (a real, validated, do-nothing-but-acknowledge StateDelta), never a generated apology.
 - Tier 3's `StateDelta` must pass `validateDelta` against the active scene's creator bounds before apply; reject (→ graceful non-response) if it doesn't.

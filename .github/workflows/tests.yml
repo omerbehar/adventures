@@ -1,0 +1,50 @@
+name: Test & Lint
+
+on:
+  push:
+    branches: ['main', 'develop']
+  pull_request:
+    branches: ['main', 'develop']
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.0'
+          channel: 'stable'
+          cache: true
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Run analyzer
+        run: flutter analyze
+        continue-on-error: false
+
+      - name: Check code formatting
+        run: dart format --output=none --set-exit-if-changed .
+        continue-on-error: false
+
+      - name: Run unit and widget tests
+        run: flutter test --coverage
+        continue-on-error: false
+
+      - name: Run integration tests
+        run: flutter test integration_test/
+        continue-on-error: false
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage/lcov.info
+          flags: flutter
+          name: flutter-coverage
+        continue-on-error: true

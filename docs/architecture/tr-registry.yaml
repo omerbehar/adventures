@@ -1,0 +1,227 @@
+# Technical Requirements Registry
+# Stable IDs for every technical requirement extracted from the design docs.
+# IDs are permanent: never renumber or delete. Mark removed requirements
+# `status: deprecated` instead. New requirements get the next sequence per system.
+#
+# Seeded by: /architecture-review (full) on 2026-06-22.
+
+last_updated: 2026-06-22
+version: 1
+engine: Flutter 3.44.0 / Dart 3.12
+source_docs:
+  - design/gdd/game-concept.md
+  - design/gdd/game-pillars.md
+  - .claude/docs/technical-preferences.md
+
+requirements:
+  # --- StateDelta / WorldState (ADR-0001) ---
+  - id: TR-state-001
+    system: state
+    requirement: Every resolution emits a typed, validated, immutable StateDelta, never prose
+    source: design/gdd/game-concept.md §Core Mechanics; Pillar 2
+    adr: ADR-0001
+    status: covered
+  - id: TR-state-002
+    system: state
+    requirement: One player action composes multiple ops (hit goal AND move a meter — loud/quiet tradeoff)
+    source: design/gdd/game-concept.md "Side-effect StateDeltas"
+    adr: ADR-0001
+    status: covered
+  - id: TR-state-003
+    system: state
+    requirement: Mutable runtime WorldState distinct from frozen SceneModel; applyDelta is a pure function
+    source: design/gdd/game-concept.md §Core Mechanics
+    adr: ADR-0001
+    status: covered
+
+  # --- Capability Ontology (ADR-0002) ---
+  - id: TR-ont-001
+    system: ontology
+    requirement: Closed canonical ~12 scalar dimensions; Social sub-vectored
+    source: design/gdd/game-concept.md §Capability Ontology
+    adr: ADR-0002
+    status: covered
+  - id: TR-ont-002
+    system: ontology
+    requirement: Open scene-local keyed facets (booleans/flags)
+    source: design/gdd/game-concept.md §Capability Ontology
+    adr: ADR-0002
+    status: covered
+  - id: TR-ont-003
+    system: ontology
+    requirement: No runtime axis coinage; promotion to a scalar axis only via ADR
+    source: design/gdd/game-concept.md; technical-preferences forbidden patterns
+    adr: ADR-0002
+    status: covered
+  - id: TR-ont-004
+    system: ontology
+    requirement: Single canonical magnitude scale shared by thresholds (0003) and magnitude tables (0004)
+    source: design/gdd/game-concept.md §Determinism discipline
+    adr: ADR-0002
+    status: covered
+
+  # --- Scene Model (ADR-0003) ---
+  - id: TR-scene-001
+    system: scene
+    requirement: Entities with typed properties; solution paths as conditional thresholds over the Ontology
+    source: design/gdd/game-concept.md §The Scene Model; Pillar 6
+    adr: ADR-0003
+    status: covered
+  - id: TR-scene-002
+    system: scene
+    requirement: Conditional thresholds whose required magnitude changes with facets (IfFacet) = the decisive move
+    source: design/gdd/game-concept.md "conditional thresholds"; Pillar 3
+    adr: ADR-0003
+    status: covered
+  - id: TR-scene-003
+    system: scene
+    requirement: Discovery moves — paths that reveal facets rather than progress (RevealFacet)
+    source: design/gdd/game-concept.md "discovery moves"
+    adr: ADR-0001/0003
+    status: covered
+  - id: TR-scene-004
+    system: scene
+    requirement: Scalar world-state meters (e.g. Alertness 0–100), not just booleans
+    source: design/gdd/game-concept.md "scalar world-state meters"
+    adr: ADR-0003
+    status: covered
+  - id: TR-scene-005
+    system: scene
+    requirement: Reactive thresholds — world-state crossing a line fires an authored autonomous transition
+    source: design/gdd/game-concept.md "reactive thresholds"
+    adr: ADR-0003/0006
+    status: covered
+  - id: TR-scene-006
+    system: scene
+    requirement: Scene-graph composition — adventure is a graph of nodes sharing global meters/facets
+    source: design/gdd/game-concept.md "scene-graph composition"
+    adr: ADR-0003
+    status: covered
+  - id: TR-p4-001
+    system: scene
+    requirement: Scene Model JSON format IS the creator-facing primitive (primitive parity)
+    source: design/gdd/game-pillars.md Pillar 4
+    adr: ADR-0003
+    status: covered
+
+  # --- Translator (ADR-0004) ---
+  - id: TR-trans-001
+    system: translator
+    requirement: Freeform player text becomes a typed CapabilityVector {axes, magnitude, target}
+    source: design/gdd/game-concept.md §Capability Translator; Pillar 1
+    adr: ADR-0004
+    status: covered
+  - id: TR-trans-002
+    system: translator
+    requirement: Classify-don't-score — LLM names axes/tactics/facets + coarse ordinal; deterministic tables compute magnitude
+    source: design/gdd/game-concept.md §Determinism discipline #1
+    adr: ADR-0004
+    status: covered
+  - id: TR-trans-003
+    system: translator
+    requirement: Class-colored resolution — the same words resolve differently per specialist
+    source: design/gdd/game-pillars.md Pillar 5
+    adr: ADR-0004
+    status: covered
+  - id: TR-trans-004
+    system: translator
+    requirement: Run-to-run stability of the decisive-move threshold for the same argument (prototype kill-criterion)
+    source: design/gdd/game-concept.md MVP/prototype kill-criterion
+    adr: ADR-0004
+    status: covered
+
+  # --- Compiler + Linter (ADR-0005) ---
+  - id: TR-comp-001
+    system: compiler
+    requirement: Scene Compiler expands a sparse seed into a reviewable Scene Model (offline, constrained)
+    source: design/gdd/game-concept.md §The Authoring Engine; Pillar 6
+    adr: ADR-0005
+    status: covered
+  - id: TR-comp-002
+    system: compiler
+    requirement: Grounding tables + a deterministic Scene Linter make bulk-approve a real economy
+    source: design/gdd/game-concept.md §Determinism discipline #2
+    adr: ADR-0005
+    status: covered
+
+  # --- Resolver (ADR-0006) ---
+  - id: TR-res-001
+    system: resolver
+    requirement: Per-beat deterministic rules engine, client/edge-side, matching vectors against thresholds
+    source: design/gdd/game-concept.md pipeline stage 5
+    adr: ADR-0006
+    status: covered
+  - id: TR-res-002
+    system: resolver
+    requirement: Per-beat advancement; patrols/timers are state machines advanced by moves, never a real-time clock
+    source: design/gdd/game-concept.md; anti-pillar (no twitch)
+    adr: ADR-0006
+    status: covered
+  - id: TR-res-003
+    system: resolver
+    requirement: Outcome single source of truth — Resolver derives outcome from the applied Outcome op
+    source: design/gdd/game-concept.md §Core Mechanics
+    adr: ADR-0001/0006
+    status: covered
+
+  # --- Router cascade + bounded fallback (ADR-0007) ---
+  - id: TR-route-001
+    system: router
+    requirement: Four-tier cascade (0→1→2→3); escalate only as far as necessary
+    source: design/gdd/game-concept.md §Where each piece runs
+    adr: ADR-0007
+    status: covered
+  - id: TR-route-002
+    system: router
+    requirement: Bounded fallback (Tier 3) emits a validated StateDelta within creator bounds, never prose
+    source: design/gdd/game-pillars.md Pillar 2
+    adr: ADR-0007/0003
+    status: covered
+  - id: TR-route-003
+    system: router
+    requirement: Deterministic hot path (Tiers 0/1 + Resolver) runs client/edge-side and is offline-capable
+    source: design/gdd/game-concept.md stack-shaping constraint #1
+    adr: ADR-0006/0007
+    status: covered
+  - id: TR-route-004
+    system: router
+    requirement: Hard per-turn generative-token budget, instrumented from prototype #1
+    source: design/gdd/game-concept.md stack-shaping constraint #4
+    adr: ADR-0007
+    status: covered
+
+  # --- Feedback loop (ADR-0008) ---
+  - id: TR-fb-001
+    system: feedback
+    requirement: Offline-gated fallback proposal → Compiler candidate path (no runtime promotion)
+    source: design/gdd/game-concept.md §Feedback; Unique Hook
+    adr: ADR-0008
+    status: covered
+  - id: TR-fb-002
+    system: feedback
+    requirement: Player-input capture data-handling/privacy policy before capture ships in a player build
+    source: design/gdd/game-concept.md risks; ADR-0008
+    adr: ADR-0008
+    status: partial   # policy deferred; owner (security-engineer) named in ADR-0008
+
+  # --- Cross-cutting config / eval ---
+  - id: TR-cfg-001
+    system: config
+    requirement: Versioned embedding index + classify tables + prompts; eval harness re-runs on any model/table change
+    source: design/gdd/game-concept.md stack-shaping constraint #5
+    adr: ADR-0004/0007
+    status: partial   # versioning covered in ADRs; eval harness not its own tracked artifact
+
+  # --- GAPS (no ADR yet) ---
+  - id: TR-client-001
+    system: client
+    requirement: Cross-platform thin-client architecture (PC/Web/Mobile) — UI/state-mgmt, navigation/router for shareable URLs, translation-moment visual beat, soft-keyboard handling, <5MB initial Wasm bundle
+    source: design/gdd/game-concept.md "one portable cross-platform UI layer"; technical-preferences platforms
+    adr: ADR-0009
+    status: covered   # closed 2026-06-22 by ADR-0009 (client-and-ui-architecture)
+  - id: TR-persist-001
+    system: persistence
+    requirement: Save/persistence architecture beyond StateDelta serialization (session/adventure persistence)
+    source: design/gdd/game-concept.md MVP "StateDelta persistence"
+    adr: null
+    status: gap   # deferred-acceptable; concept places basic save at Vertical Slice

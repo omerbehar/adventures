@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+Accepted
 
 ## Date
 
@@ -118,18 +118,41 @@ sealed class StateDeltaOp { const StateDeltaOp(); }
 
 final class SetFacet      extends StateDeltaOp { const SetFacet(this.key, this.value);     final String key; final bool value; }
 final class AdjustMeter   extends StateDeltaOp { const AdjustMeter(this.meter, this.delta); final String meter; final int delta; }
-final class SetEntityProp extends StateDeltaOp { const SetEntityProp(this.entityId, this.prop, this.value); final String entityId; final String prop; final Object value; }
+final class SetEntityProp extends StateDeltaOp { const SetEntityProp(this.entityId, this.prop, this.value); final String entityId; final String prop; final PropValue value; }
 final class TransitionNode extends StateDeltaOp { const TransitionNode(this.targetNodeId); final String targetNodeId; }
 final class RevealFacet   extends StateDeltaOp { const RevealFacet(this.key);  final String key; }   // discovery move
 final class Outcome       extends StateDeltaOp { const Outcome(this.result);   final OutcomeResult result; } // win / lose / continue
 
 enum OutcomeResult { escape, win, lose, advance }
 
+/// First-class, JSON-round-trippable value type for entity-property and similar
+/// scalar values. A `sealed` union (not `Object`) so serialization and validation
+/// are exhaustive and type-info survives a JSON round-trip (Validation Criterion).
+/// Promoted from an implementation note to a first-class type per the 2026-06-22
+/// architecture review (finding N4). The Scene Model (ADR-0003) uses this same type
+/// for `Entity.props`.
+sealed class PropValue { const PropValue(); }
+final class PropString extends PropValue { const PropString(this.value); final String value; }
+final class PropInt    extends PropValue { const PropInt(this.value);    final int value; }
+final class PropBool   extends PropValue { const PropBool(this.value);   final bool value; }
+final class PropDouble extends PropValue { const PropDouble(this.value); final double value; }
+
 /// Pure application — no I/O, no clocks, no randomness.
 WorldState applyDelta(WorldState state, StateDelta delta);
 
 /// Validation against the active scene + ontology. Returns errors, empty = valid.
-List<ValidationError> validateDelta(StateDelta delta, SceneModel scene, Ontology ontology);
+/// `enforceBounds` is supplied ONLY for fallback-originated deltas (Tier-3, ADR-0007):
+/// when non-null, every op must stay within the scene's `FallbackBounds` (ADR-0003).
+/// Authored path effects pass `enforceBounds: null` — they are not bound by the
+/// fallback envelope and may legitimately exceed `maxMeterDelta` or emit an `Outcome`.
+/// (Provenance/bounds seam reconciled across ADR-0001/0003/0007 per the 2026-06-22 review.)
+///
+/// PLACEMENT: this function lives in the scene/validation layer (it references
+/// `SceneModel` from ADR-0003, which itself depends on `StateDelta`). It is NOT placed
+/// in `lib/game/state_delta.dart`, which would invert the dependency and create a
+/// 0001→0003→0001 type cycle. The `StateDelta` *data class* stays dependency-free.
+List<ValidationError> validateDelta(StateDelta delta, SceneModel scene, Ontology ontology,
+    {FallbackBounds? enforceBounds});
 ```
 
 ### WorldState — the mutable runtime counterpart to the frozen SceneModel
@@ -151,18 +174,29 @@ final class WorldState {
     required this.entityProps,       // per-entity property overrides vs the frozen scene
     required this.beatCursors,       // per-beat state-machine positions (patrols/timers)
   });
+  // All collections MUST be stored as unmodifiable views (UnmodifiableSetView /
+  // Map.unmodifiable) — applyDelta returns a NEW WorldState built from defensive
+  // copies; the previous state's collections are never mutated in place. Skipping
+  // this copy discipline silently breaks determinism (review finding N3).
   final String currentNodeId;
   final Map<String, int> meters;
   final Set<FacetKey> facets;
   final Set<FacetKey> revealedFacets;
-  final Map<String, Map<String, Object>> entityProps;
+  final Map<String, Map<String, PropValue>> entityProps;   // PropValue, not Object (N4)
   final Map<String, int> beatCursors;   // advanced per move, NEVER by a wall clock (ADR-0006)
 
   WorldStateSnapshot snapshot();        // immutable capture for feedback (ADR-0008)
 }
 
 /// A serializable, read-only capture of WorldState at a beat (used by ADR-0008).
-typedef WorldStateSnapshot = WorldState; // snapshot is structurally a frozen WorldState
+/// A DISTINCT type, not `typedef WorldStateSnapshot = WorldState` — a typedef gives
+/// zero type safety, letting a live WorldState be passed where a frozen snapshot is
+/// required (review finding N8). The wrapper makes "frozen, point-in-time" enforceable.
+final class WorldStateSnapshot {
+  const WorldStateSnapshot(this._state);
+  final WorldState _state;
+  WorldState get state => _state;       // read-only view; the snapshot is never mutated
+}
 ```
 
 > **Single source of outcome truth**: `OutcomeResult` is defined here and is the *only*
@@ -177,7 +211,9 @@ typedef WorldStateSnapshot = WorldState; // snapshot is structurally a frozen Wo
 - The bounded AI fallback (ADR-0007) must emit a `StateDelta` that passes `validateDelta` within creator-declared bounds — its output is structurally identical to an authored path's effect.
 - Narration is resolved by `narrationKey` lookup in authored content; the core never holds generated prose.
 - **`const` caveat**: the `const` constructors here are only usable as compile-time `const` when callers pass `const`/literal collections. Treat them as ordinary constructors for runtime-built deltas — do not assume `const StateDelta(someVariableList)` compiles.
-- **`SetEntityProp.value` typing**: `Object` loses type info across JSON round-trip. Implementation should narrow to a discriminated `PropValue` (String | int | bool | double) so the round-trip validation criterion holds.
+- **`PropValue` (not `Object`)**: entity-property values use the first-class `sealed PropValue` union above so type info survives the JSON round-trip; `Object` is forbidden here (review finding N4). `Entity.props` in ADR-0003 uses the same type.
+- **Immutable-collection discipline**: build every `WorldState` from defensive copies wrapped in `UnmodifiableSetView` / `Map.unmodifiable`. `applyDelta` must never mutate the input state's collections (review finding N3) — this is load-bearing for the determinism property test.
+- **`validateDelta` placement & bounds**: define `validateDelta` in the scene/validation layer (not `state_delta.dart`) to avoid the 0001↔0003 type cycle, and pass `enforceBounds` only for Tier-3 fallback deltas (ADR-0007), never for authored path effects.
 
 ## Alternatives Considered
 

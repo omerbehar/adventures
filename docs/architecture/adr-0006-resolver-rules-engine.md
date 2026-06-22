@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+Accepted
 
 ## Date
 
@@ -129,7 +129,11 @@ final class NoMatch extends ResolveResult {
 
 /// Pure, deterministic, per-beat. No I/O, no clocks, no unseeded randomness.
 final class Resolver {
-  const Resolver();
+  // Optional SEEDED RNG declared up front (review finding N6) so adding determinism-
+  // safe randomness later is not a breaking call-site change. MVP passes nothing and
+  // the Resolver uses no randomness at all. `rng`, when supplied, MUST be seeded.
+  const Resolver({this.rng});
+  final SeededRng? rng;
   ResolveResult resolve(WorldState state, CapabilityVector vector);
 }
 ```
@@ -142,7 +146,7 @@ final class Resolver {
 - **Outcome single source of truth**: derive `Resolved.outcome` *from* the applied `Outcome` op in the fired `StateDelta` (ADR-0001), never compute a parallel outcome. If no `Outcome` op fired, the outcome is `advance`.
 - Make path selection a **total order**: authored `priority` then a stable secondary key (e.g. declaration index). Never rely on map/set iteration order.
 - Reactive-threshold evaluation runs to a **fixpoint** with a guard against cycles (authored thresholds must be acyclic; detect and error in the Linter, ADR-0005).
-- If any randomness is ever needed (it should not be for MVP), inject a seeded RNG via constructor — never `Random()` unseeded.
+- If any randomness is ever needed (it should not be for MVP), use the pre-declared optional seeded `rng` constructor parameter (above) — never `Random()` unseeded, and never add the parameter later as a breaking change (finding N6).
 - Return `NoMatch` rather than inventing an outcome; the bounded fallback (ADR-0007) owns gaps.
 
 ## Alternatives Considered
