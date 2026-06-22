@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Adventures — Prototype Report: Intent Translation</title>
+<style>
+  @page { margin: 2cm; }
+  body { font-family: "Liberation Serif", Georgia, serif; font-size: 11.5pt; line-height: 1.45; color:#1c1a16; }
+  h1 { font-size: 22pt; margin: 0 0 2pt; }
+  .sub { color:#6b6256; font-size: 11pt; margin: 0 0 2pt; }
+  .meta { color:#6b6256; font-size: 10pt; margin: 0 0 18pt; }
+  h2 { font-size: 14pt; border-bottom: 1.5pt solid #b8860b; padding-bottom: 3pt; margin: 20pt 0 8pt; }
+  h3 { font-size: 12pt; margin: 14pt 0 4pt; }
+  p { margin: 0 0 8pt; }
+  ul, ol { margin: 0 0 8pt 0; padding-left: 20pt; }
+  li { margin: 0 0 4pt; }
+  table { border-collapse: collapse; width: 100%; font-size: 10pt; margin: 6pt 0 12pt; }
+  th, td { border: 0.75pt solid #cfc8b8; padding: 4pt 6pt; text-align: left; vertical-align: top; }
+  th { background: #f0ead9; }
+  code, .mono { font-family: "Liberation Mono", monospace; font-size: 9.5pt; }
+  .verdict { background:#f7f0dd; border:1pt solid #b8860b; padding: 8pt 12pt; margin: 8pt 0 14pt; }
+  .verdict strong { color:#8a2b2b; font-size: 13pt; }
+  .good { color:#2b6a3a; font-weight:bold; }
+  .bad { color:#8a2b2b; font-weight:bold; }
+  .small { font-size: 9.5pt; color:#6b6256; }
+</style></head>
+<body>
+
+<h1>Prototype Report — Intent Translation</h1>
+<p class="sub">The Magistrate scene · concept kill-criterion for <em>Adventures</em></p>
+<p class="meta">Date: 22 June 2026 &nbsp;·&nbsp; Path: HTML prototype + headless Node harness &nbsp;·&nbsp; Classifier: Claude Haiku (claude-haiku-4-5) &nbsp;·&nbsp; Status: Playtested</p>
+
+<div class="verdict"><strong>Verdict: PIVOT.</strong> The core idea is sound, but the first
+mechanisation of “classify-don’t-score” is not stable enough and the decisive-move mapping is
+wrong. Do not spend on content yet — apply the two-line fix below and re-test.</div>
+
+<h2>1. What this prototype is</h2>
+<p>A throwaway build that answers one question from the game concept’s production plan: <em>does
+the “classify-don’t-score” translation pipeline keep a social scene’s decisive-move threshold
+stable run-to-run?</em> This is the concept’s explicit prototype kill-criterion — the cheapest
+prove-or-kill of the central technical bet, to be settled before any design, tooling, or content
+spend.</p>
+<p>The scene is <strong>the Magistrate</strong>: the player stands accused before a corrupt judge
+and must, in their own freeform words, get acquitted. The intended <em>decisive move</em> is to
+discover and then invoke the leverage that the magistrate took bribes — which should collapse a
+hard persuasion threshold to a trivial one (Pillar 3, “the decisive move”).</p>
+
+<h3>Falsifiable hypothesis</h3>
+<p>If a player expresses the decisive move in their own varied words, the pipeline collapses the
+threshold <em>consistently</em>. Accept if, across N≈20 runs of ~5 natural phrasings, the
+decisive-move outcome holds ≥95%, and the deterministic stages are 100% reproducible given a
+fixed classification.</p>
+<p><strong>Riskiest assumption (tested first):</strong> that an LLM classifying evaluative/social
+intent is stable enough run-to-run that the threshold does not flip.</p>
+
+<h2>2. How it works (and how it maps to the architecture)</h2>
+<p>The prototype mirrors the accepted ADRs closely enough that learnings transfer, while remaining
+throwaway code that production never imports.</p>
+<table>
+<tr><th>Prototype component</th><th>What it does</th><th>Mirrors</th></tr>
+<tr><td>Stage A — classify</td><td>Claude Haiku <em>names</em> the axis, channel, a coarse ordinal, and whether the bribe-scandal is invoked, via a strict tool-use schema. It never emits a number.</td><td>ADR-0004 (classify-don’t-score)</td></tr>
+<tr><td>Stage B — score</td><td>Deterministic, class-coloured lookup tables turn the classification into an integer capability magnitude.</td><td>ADR-0004 (Stage B)</td></tr>
+<tr><td>Scene Model</td><td>Entities, conditional thresholds, the scandal leverage facet, a suspicion meter with a reactive lockdown, and authored narration keys (never generated prose).</td><td>ADR-0003</td></tr>
+<tr><td>Resolver</td><td>Pure, per-beat engine; evaluates the conditional threshold (the facet collapse = the decisive move) and fires an authored outcome.</td><td>ADR-0006</td></tr>
+<tr><td>Class colouring</td><td>The same words resolve differently for Diplomat / Assassin / Scholar.</td><td>Pillar 5</td></tr>
+</table>
+<p class="small">Deliverables: <span class="mono">prototype.html</span> (playable, single file, no install) and
+<span class="mono">harness.mjs</span> (headless twin for terminal/CI; uses the live classifier when an API key is present, else a deterministic heuristic stub).</p>
+
+<h2>3. How it was run</h2>
+<ul>
+<li><strong>Deterministic half</strong> — run headlessly with no key: a 1000-run determinism self-test, class-divergence check, and the discover-then-leverage mechanic.</li>
+<li><strong>The real bet</strong> — run against live Claude Haiku (<span class="mono">claude-haiku-4-5</span>), strict tool use: a probe printing the raw classification 5× per phrasing, plus the stability harness (N=20, Diplomat, scandal already discovered).</li>
+</ul>
+
+<h2>4. Results</h2>
+
+<h3>4.1 Deterministic half — PASS</h3>
+<ul>
+<li><span class="good">Stage B determinism: PASS</span> for all three classes (1000 runs each → byte-identical vector).</li>
+<li><span class="good">Class divergence works</span>: one classification → Diplomat win, Scholar win (collapsed threshold), Assassin advance (not a persuader).</li>
+<li><span class="good">Decisive-move mechanic works</span>: discover → reveal the scandal facet → leverage → threshold collapses → win.</li>
+</ul>
+<p>This confirms the design intent of classify-don’t-score: it successfully quarantines <em>all</em>
+run-to-run variance into Stage A, which is exactly where the harness then caught it.</p>
+
+<h3>4.2 The real bet (Stage A stability) — the kill-criterion</h3>
+<p><strong>Stage A axis classification is NOT stable run-to-run.</strong> Probing each phrasing five
+times, four of five produced two or three <em>different</em> (axis / channel / ordinal)
+classifications. The same sentence was labelled with different scalar axes on different runs.</p>
+<table>
+<tr><th>Player phrasing (the decisive move, varied)</th><th>Distinct classifications in 5 runs</th><th>Scandal facet detected</th></tr>
+<tr><td>“I remind him, quietly, that I know about the bribes”</td><td>3 — social/intimidation, insight/deception, insight/intimidation</td><td class="good">true ×5</td></tr>
+<tr><td>“I let slip that the scandal could become public”</td><td>3 — social, force, and stealth (all intimidation)</td><td class="good">true ×5</td></tr>
+<tr><td>“If he convicts me, everyone hears how he was paid off”</td><td>1 — social/intimidation/major</td><td class="good">true ×5</td></tr>
+<tr><td>“I hint his corruption need not come to light”</td><td>2 — deception, intimidation</td><td class="good">true ×5</td></tr>
+<tr><td>“I calmly mention the gold that changed hands”</td><td>3 — insight/none, social/persuasion, insight/persuasion</td><td class="good">true ×5</td></tr>
+</table>
+
+<p><strong>But the leverage facet was detected with perfect stability:</strong>
+<span class="mono">invokesScandalFacet = true</span> in <strong>all 25 classifications</strong>. The model
+is dependable about <em>what leverage is invoked</em>; it is unreliable about <em>which scalar axis</em>
+the action is.</p>
+
+<p><strong>The apparent “100% stable” outcome was misleading.</strong> The N=20 stability run reported
+100% for the first phrasings — but only because every divergent classification happens to map to
+<em>advance</em> (a <span class="bad">loss</span> of the decisive move) for the Diplomat: scandal
+leverage reads as intimidation/deception, where the Diplomat is weak, so nothing clears a win
+threshold. Where a <em>winning</em> classification was even possible (“I calmly mention the gold…”:
+persuasion 1/5 → win, otherwise advance), the outcome flips — roughly 80%, i.e. <span class="bad">unstable</span>.
+So the decisive move both (a) rarely lands and (b) when it can, depends on a coin-flip axis label.</p>
+
+<h3>4.3 Operational finding</h3>
+<p>Under repeated calls the run aborted with <span class="mono">API 400: Grammar compilation timed
+out</span> — strict tool-use grammar compilation intermittently times out. A production translator
+needs retry/backoff or a non-strict + repair path (relevant to ADR-0007’s structured-output
+discipline).</p>
+
+<h2>5. Best / worst / surprise</h2>
+<ul>
+<li><strong>Best:</strong> facet recognition was rock-solid (25/25). The model is dependable at naming the <em>leverage</em> — which is the part the decisive move actually needs.</li>
+<li><strong>Worst:</strong> single-axis classification of social intent is genuinely noisy — the exact variance the concept feared.</li>
+<li><strong>Surprise:</strong> the scene <em>masked</em> the instability. Stability-by-degenerate-collapse (everything fails the same way) looked like a pass until the probe exposed the underlying variance.</li>
+</ul>
+
+<h2>6. Verdict and the fix</h2>
+<p>The core idea survives, but the first mechanisation does not meet the kill-criterion as written.
+The fix is specific and cheap:</p>
+<ol>
+<li><strong>Key the decisive-move collapse on the reliably-detected facet</strong>
+(<span class="mono">invokesScandalFacet</span>), not on a brittle single primary axis or magnitude.
+The model is stable about the facet; lean on that.</li>
+<li><strong>Let Stage A name multiple axes</strong> with per-axis ordinals (as ADR-0004 already
+envisions). A single primary axis discards nuance and lets incidental label variance flip outcomes.</li>
+<li><strong>Handle the strict-tool grammar 400</strong> with retry/backoff or a non-strict + JSON-repair path.</li>
+</ol>
+<p>Re-run the same harness after changes (1)+(2) before re-deciding. No content, tooling, or
+Compiler spend until the decisive-move outcome is stable.</p>
+
+<h2>7. What this cost</h2>
+<p>~30 live Haiku classifications — a fraction of a cent. The prototype paid for itself by catching,
+in one afternoon, a stability-and-mapping flaw that would otherwise have surfaced after content
+authoring began.</p>
+
+<p class="small">Throwaway prototype — not production code. The production translator is written fresh
+from the accepted ADRs; prototype code is never refactored into the engine.</p>
+
+</body></html>
