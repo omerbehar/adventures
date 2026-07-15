@@ -113,10 +113,15 @@ player text + scene context + active class
 ```dart
 /// The deterministic output consumed by the Resolver.
 final class CapabilityVector {
-  const CapabilityVector({required this.magnitudes, required this.target, required this.classId});
+  const CapabilityVector({required this.magnitudes, required this.invokedFacets, required this.target, required this.classId});
   // Keyed on CapabilityAxisKey (a record) for value-equality — see ADR-0002.
   // A plain-class key would miss on every lookup and break Resolver determinism.
   final Map<CapabilityAxisKey, int> magnitudes;   // computed by Stage B, never by the LLM
+  // Surfaced verbatim from Stage A's Classification.facetsInvoked (Stage B passes it through
+  // unmodified). The Resolver's Invokes(facet) threshold reads this — it is the STABLE decisive-
+  // move signal (the classifier reliably names the invoked leverage even when it disagrees on the
+  // axis). Added 2026-06-22 per docs/architecture/scene-decomposition-spec.md §7 / ADR-0003 R2.
+  final Set<FacetKey> invokedFacets;
   final String target;                            // entityId or 'self'
   final String classId;                           // active specialist (Pillar 5)
 }

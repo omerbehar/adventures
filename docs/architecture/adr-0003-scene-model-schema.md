@@ -10,7 +10,17 @@ Accepted
 
 ## Last Verified
 
-2026-06-21
+2026-06-22
+
+## Revision History
+
+- **R1 (2026-06-22)** — engine-review refinements: `Entity.props` uses `PropValue` (not `Object`);
+  `ThresholdExpr` acyclicity/depth gate (finding N7); macro-JSON demoted to aspirational (N1).
+- **R2 (2026-06-22)** — extended the `ThresholdExpr` form set (added `WorldFacet`, `Invokes`,
+  `AllOf`, `AnyOf`, `Not` alongside `AxisAtLeast`, `IfFacet`) so the decisive-move collapse keys
+  on the reliably-classified facet, not a noisy scalar axis. Adds the `vector.invokedFacets`
+  dependency on ADR-0004. Ratifies `docs/architecture/scene-decomposition-spec.md` §3/§7; the
+  Scene Linter (ADR-0005) enforces the corresponding rules.
 
 ## Decision Makers
 
@@ -170,12 +180,25 @@ final class SolutionPath {
 
 enum PathKind { progress, discovery }
 
-/// Conditional threshold: a base requirement on an axis, optionally lowered/raised by facets.
+/// Conditional threshold: a sealed tree evaluated to bool against the CapabilityVector
+/// (ADR-0004) + the current WorldState.facets (ADR-0001). The decisive move (Pillar 3) is
+/// the point where a facet flips the tree from a hard requirement to a trivial one.
+/// Extended 2026-06-22 (Revision 2) per docs/architecture/scene-decomposition-spec.md §3 —
+/// the two original variants proved insufficient once the intent-translation prototype showed
+/// the classifier reliably names WHICH LEVERAGE is invoked but is noisy about WHICH AXIS.
+/// The collapse must therefore key on a facet, not a specific axis magnitude — hence `Invokes`.
 sealed class ThresholdExpr { const ThresholdExpr(); }
-final class AxisAtLeast extends ThresholdExpr {            // e.g. Force >= 20
+final class AxisAtLeast extends ThresholdExpr {            // vector magnitude on an axis >= mag
   const AxisAtLeast(this.axis, this.magnitude); final CapabilityAxis axis; final int magnitude; }
-final class IfFacet extends ThresholdExpr {               // conditional collapse — the decisive move
+final class IfFacet extends ThresholdExpr {               // if world facet set -> thenExpr else elseExpr
   const IfFacet(this.facet, this.thenExpr, this.elseExpr); final FacetKey facet; final ThresholdExpr thenExpr; final ThresholdExpr elseExpr; }
+final class WorldFacet extends ThresholdExpr {            // world facet is currently set (a gate)
+  const WorldFacet(this.facet); final FacetKey facet; }
+final class Invokes extends ThresholdExpr {               // action invoked this facet (vector.invokedFacets, ADR-0004)
+  const Invokes(this.facet); final FacetKey facet; }      // THE decisive-move key — stable classifier signal
+final class AllOf extends ThresholdExpr { const AllOf(this.parts); final List<ThresholdExpr> parts; } // conjunction
+final class AnyOf extends ThresholdExpr { const AnyOf(this.parts); final List<ThresholdExpr> parts; } // disjunction
+final class Not   extends ThresholdExpr { const Not(this.part);    final ThresholdExpr part; }
 
 final class ReactiveThreshold {                            // Alertness >= 60 -> lockdown
   const ReactiveThreshold({required this.meter, required this.atLeast, required this.effect});
@@ -190,8 +213,9 @@ final class MeterSpec { const MeterSpec({required this.min, required this.max, r
 - Place in `lib/scene/` (pure Dart). No Flutter imports.
 - JSON is the source-of-truth authoring format (`assets/scenes/*.json`); validate against a schema on load and reject malformed scenes (do not silently coerce).
 - A scene is loaded and validated once, then treated as immutable/frozen at runtime — no per-beat mutation of the model (world *state* lives separately in `WorldState`, defined in ADR-0001).
-- `ThresholdExpr` is a `sealed` tree so the Resolver's evaluation (ADR-0006) is exhaustive. The decisive move (Pillar 3) is mechanically an `IfFacet` that collapses a hard `AxisAtLeast` to a trivial one.
-- **`ThresholdExpr` acyclicity / depth bound (review finding N7)**: `IfFacet` is recursive (`thenExpr`/`elseExpr` are themselves `ThresholdExpr`). Schema validation on load MUST enforce a maximum tree depth and reject any structure that cannot be built as a finite acyclic tree, so a malformed scene cannot drive the Resolver into unbounded recursion / stack overflow. The Scene Linter (ADR-0005) carries the same rule for compiled scenes. (This mirrors the acyclicity guarantee ADR-0006 already requires for reactive thresholds.)
+- `ThresholdExpr` is a `sealed` tree so the Resolver's evaluation (ADR-0006) is exhaustive. The decisive move (Pillar 3) is mechanically a facet flip that collapses a hard requirement to a trivial one. **Prefer keying the collapse on `Invokes(facet)` (and/or `WorldFacet(facet)`) rather than on a specific axis magnitude** — the classifier reliably names the invoked leverage but is noisy about the scalar axis (intent-translation prototype, 2026-06-22). The canonical form is `AnyOf([ AllOf([WorldFacet(x), Invokes(x), AxisAtLeast(axis, trivialMag)]), AxisAtLeast(axis, bruteMag) ])`.
+- **`Invokes` requires `vector.invokedFacets`**: the Resolver reads which facets Stage A tagged from the `CapabilityVector` (ADR-0004 surfaces `Classification.facetsInvoked` as `invokedFacets`). `WorldFacet` reads `WorldState.facets` (ADR-0001).
+- **`ThresholdExpr` acyclicity / depth bound (review finding N7)**: the tree is recursive (`IfFacet.thenExpr`/`elseExpr`, `AllOf`/`AnyOf.parts`, `Not.part` are themselves `ThresholdExpr`). Schema validation on load MUST enforce a maximum tree depth and reject any structure that cannot be built as a finite acyclic tree, so a malformed scene cannot drive the Resolver into unbounded recursion / stack overflow. The Scene Linter (ADR-0005, rule L-07) carries the same rule for compiled scenes. (This mirrors the acyclicity guarantee ADR-0006 already requires for reactive thresholds.)
 - **JSON (de)serialization**: MVP hand-rolls `fromJson`/`toJson` — no codegen, no package dependency. Macro-based codegen is aspirational and gated on technical-director package approval (see Engine Compatibility, finding N1).
 
 ## Alternatives Considered

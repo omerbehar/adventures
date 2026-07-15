@@ -7,10 +7,10 @@
 > **Consumes/affects:** ADR-0001 (StateDelta/PropValue), ADR-0002 (Ontology), ADR-0004
 > (CapabilityVector — see §7 refinement), ADR-0006 (Resolver evaluation order).
 >
-> ⚠️ **ADR impact:** §3 extends `ThresholdExpr` beyond ADR-0003's two accepted variants
-> (`AxisAtLeast`, `IfFacet`). Adding variants is a schema change — before this spec is
-> ratified, ADR-0003 must be updated/superseded to record the extended form set. Flagged
-> inline as **[ADR-0003 EXT]**.
+> ✅ **Ratified:** the extended `ThresholdExpr` form set in §3 and the `invokedFacets` addition in
+> §7 were folded into **ADR-0003 (Revision 2, 2026-06-22)**, with matching updates to ADR-0004
+> (`CapabilityVector.invokedFacets`) and ADR-0006 (Resolver evaluation). Variants beyond ADR-0003's
+> original two are still marked **[ADR-0003 EXT]** inline for provenance.
 
 ---
 
@@ -318,7 +318,8 @@ invoked. This threads through:
 - Net effect: the decisive-move collapse keys on the *reliably-classified* facet, not the noisy
   axis — directly closing the prototype's PIVOT.
 
-This is a small, additive change to two Accepted ADRs — record it when ADR-0003 is updated for §3.
+Done — folded into ADR-0004 (`CapabilityVector.invokedFacets`) and ADR-0006 (Resolver reads it)
+alongside ADR-0003 R2.
 
 ---
 
@@ -336,8 +337,8 @@ This is a small, additive change to two Accepted ADRs — record it when ADR-000
 
 ## 9. Next steps
 
-- Ratify §3 by updating/superseding **ADR-0003** with the extended `ThresholdExpr` form set and
-  the §7 `invokedFacets` addition.
+- ~~Ratify §3 by updating **ADR-0003** with the extended `ThresholdExpr` form set and the §7
+  `invokedFacets` addition.~~ ✅ Done — ADR-0003 R2 + ADR-0004/0006 updates (2026-06-22).
 - Build the **Scene Linter** (§5) as the first implementable piece — pure Dart, unit-tested for
   determinism, runs headlessly in CI on every authored/compiled scene.
 - Re-run the intent-translation prototype's PIVOT with `Invokes(scandal)` keying the collapse, to
