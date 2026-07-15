@@ -36,35 +36,110 @@ final class GroundingTables {
 
   /// A minimal default band set (illustrative — tune during balancing). Covers the axes
   /// the MVP scenes exercise; unlisted axes simply skip band checks.
-  static GroundingTables defaults() {
+  factory GroundingTables.defaults() {
     ((CapabilityDimension, SocialChannel?), Difficulty) k(
-            CapabilityDimension d, SocialChannel? c, Difficulty diff) =>
-        ((d, c), diff);
-    return GroundingTables('defaults-v0', ThresholdNorms({
-      // force
-      k(CapabilityDimension.force, null, Difficulty.trivial): (0, 10),
-      k(CapabilityDimension.force, null, Difficulty.easy): (11, 20),
-      k(CapabilityDimension.force, null, Difficulty.standard): (21, 35),
-      k(CapabilityDimension.force, null, Difficulty.hard): (36, 55),
-      k(CapabilityDimension.force, null, Difficulty.extreme): (56, 80),
-      // insight
-      k(CapabilityDimension.insight, null, Difficulty.trivial): (0, 12),
-      k(CapabilityDimension.insight, null, Difficulty.easy): (13, 20),
-      k(CapabilityDimension.insight, null, Difficulty.standard): (21, 35),
-      k(CapabilityDimension.insight, null, Difficulty.hard): (36, 50),
-      k(CapabilityDimension.insight, null, Difficulty.extreme): (51, 75),
-      // social.persuasion
-      k(CapabilityDimension.social, SocialChannel.persuasion, Difficulty.trivial): (0, 12),
-      k(CapabilityDimension.social, SocialChannel.persuasion, Difficulty.easy): (13, 20),
-      k(CapabilityDimension.social, SocialChannel.persuasion, Difficulty.standard): (21, 35),
-      k(CapabilityDimension.social, SocialChannel.persuasion, Difficulty.hard): (36, 50),
-      k(CapabilityDimension.social, SocialChannel.persuasion, Difficulty.extreme): (51, 75),
-      // social.intimidation
-      k(CapabilityDimension.social, SocialChannel.intimidation, Difficulty.trivial): (0, 12),
-      k(CapabilityDimension.social, SocialChannel.intimidation, Difficulty.easy): (13, 22),
-      k(CapabilityDimension.social, SocialChannel.intimidation, Difficulty.standard): (23, 38),
-      k(CapabilityDimension.social, SocialChannel.intimidation, Difficulty.hard): (39, 55),
-      k(CapabilityDimension.social, SocialChannel.intimidation, Difficulty.extreme): (56, 80),
-    }));
+      CapabilityDimension d,
+      SocialChannel? c,
+      Difficulty diff,
+    ) => ((d, c), diff);
+    return GroundingTables(
+      'defaults-v0',
+      ThresholdNorms({
+        // force
+        k(CapabilityDimension.force, null, Difficulty.trivial): (0, 10),
+        k(CapabilityDimension.force, null, Difficulty.easy): (11, 20),
+        k(CapabilityDimension.force, null, Difficulty.standard): (21, 35),
+        k(CapabilityDimension.force, null, Difficulty.hard): (36, 55),
+        k(CapabilityDimension.force, null, Difficulty.extreme): (56, 80),
+        // insight
+        k(CapabilityDimension.insight, null, Difficulty.trivial): (0, 12),
+        k(CapabilityDimension.insight, null, Difficulty.easy): (13, 20),
+        k(CapabilityDimension.insight, null, Difficulty.standard): (21, 35),
+        k(CapabilityDimension.insight, null, Difficulty.hard): (36, 50),
+        k(CapabilityDimension.insight, null, Difficulty.extreme): (51, 75),
+        // social.persuasion
+        k(
+          CapabilityDimension.social,
+          SocialChannel.persuasion,
+          Difficulty.trivial,
+        ): (
+          0,
+          12,
+        ),
+        k(
+          CapabilityDimension.social,
+          SocialChannel.persuasion,
+          Difficulty.easy,
+        ): (
+          13,
+          20,
+        ),
+        k(
+          CapabilityDimension.social,
+          SocialChannel.persuasion,
+          Difficulty.standard,
+        ): (
+          21,
+          35,
+        ),
+        k(
+          CapabilityDimension.social,
+          SocialChannel.persuasion,
+          Difficulty.hard,
+        ): (
+          36,
+          50,
+        ),
+        k(
+          CapabilityDimension.social,
+          SocialChannel.persuasion,
+          Difficulty.extreme,
+        ): (
+          51,
+          75,
+        ),
+        // social.intimidation
+        k(
+          CapabilityDimension.social,
+          SocialChannel.intimidation,
+          Difficulty.trivial,
+        ): (
+          0,
+          12,
+        ),
+        k(
+          CapabilityDimension.social,
+          SocialChannel.intimidation,
+          Difficulty.easy,
+        ): (
+          13,
+          22,
+        ),
+        k(
+          CapabilityDimension.social,
+          SocialChannel.intimidation,
+          Difficulty.standard,
+        ): (
+          23,
+          38,
+        ),
+        k(
+          CapabilityDimension.social,
+          SocialChannel.intimidation,
+          Difficulty.hard,
+        ): (
+          39,
+          55,
+        ),
+        k(
+          CapabilityDimension.social,
+          SocialChannel.intimidation,
+          Difficulty.extreme,
+        ): (
+          56,
+          80,
+        ),
+      }),
+    );
   }
 }

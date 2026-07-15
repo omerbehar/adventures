@@ -38,7 +38,8 @@ linter:
 
     # Style Rules
     - always_declare_return_types
-    - always_put_control_body_on_new_line
+    # always_put_control_body_on_new_line removed: forbids idiomatic guard clauses
+    # like `if (cond) return;`.
     - always_put_required_named_parameters_first
     - annotate_overrides
     - avoid_bool_literals_in_conditional_expressions
@@ -49,7 +50,8 @@ linter:
     - avoid_function_literals_in_foreach_calls
     - avoid_init_to_null
     - avoid_null_checks_in_equality_operators
-    - avoid_positional_boolean_parameters
+    # avoid_positional_boolean_parameters removed: noisy for small typed value
+    # constructors (e.g. SetFacet(key, value), PropBool(value)).
     - avoid_private_typedef_functions
     - avoid_renaming_method_parameters
     - avoid_returning_null
@@ -62,7 +64,6 @@ linter:
     - camel_case_extensions
     - camel_case_types
     - cascade_invocations
-    - cast_nullable_to_non_nullable
     - constant_identifier_names
     - curly_braces_in_flow_control_structures
     - directives_ordering
@@ -75,7 +76,9 @@ linter:
     - library_names
     - library_prefixes
     - library_private_types_in_public_api
-    - lines_longer_than_80_chars
+    # lines_longer_than_80_chars removed: it conflicts with `dart format` (the mandated
+    # formatter emits lines >80 for strings/comments/long type sigs). Line width is the
+    # formatter's job, not a lint's.
     - no_leading_underscores_for_library_prefixes
     - no_leading_underscores_for_local_variables
     - null_closures
@@ -133,7 +136,8 @@ linter:
     - sized_box_shrink_expand
     - slash_for_doc_comments
     - sort_child_properties_last
-    - sort_constructors_first
+    # sort_constructors_first removed: forces factory `fromJson` constructors above the
+    # fields they populate, which reads worse for these data classes.
     - sort_pub_dependencies
     - sort_unnamed_constructors_first
     - tighten_type_of_initializing_formals

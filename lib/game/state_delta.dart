@@ -65,7 +65,10 @@ sealed class StateDeltaOp {
       case 'SetEntityProp':
         final a = v! as List;
         return SetEntityProp(
-            a[0] as String, a[1] as String, PropValue.fromJson((a[2] as Map).cast()));
+          a[0] as String,
+          a[1] as String,
+          PropValue.fromJson((a[2] as Map).cast()),
+        );
       case 'TransitionNode':
         return TransitionNode(v! as String);
       case 'RevealFacet':

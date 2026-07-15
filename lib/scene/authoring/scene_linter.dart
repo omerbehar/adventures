@@ -28,7 +28,8 @@ final class LintReport {
   final List<LintFinding> findings;
   bool get passes => findings.every((f) => f.severity != LintSeverity.error);
 
-  Iterable<LintFinding> get errors => findings.where((f) => f.severity == LintSeverity.error);
+  Iterable<LintFinding> get errors =>
+      findings.where((f) => f.severity == LintSeverity.error);
 }
 
 /// Deterministic linter. Construct once with the ontology + grounding tables; `lint` is pure.
@@ -66,8 +67,12 @@ final class SceneLinter {
       // L-07 — depth bound (recursion / stack-overflow guard).
       final depth = _depth(p.requirement);
       if (depth > maxThresholdDepth) {
-        add('L-07', LintSeverity.error, '$loc.requirement',
-            'ThresholdExpr depth $depth exceeds max $maxThresholdDepth');
+        add(
+          'L-07',
+          LintSeverity.error,
+          '$loc.requirement',
+          'ThresholdExpr depth $depth exceeds max $maxThresholdDepth',
+        );
       }
 
       // L-01 — facet references in the requirement must be declared.
@@ -75,47 +80,77 @@ final class SceneLinter {
       _facetsInExpr(p.requirement, reqFacets);
       for (final key in reqFacets) {
         if (!allFacets.contains(key)) {
-          add('L-01', LintSeverity.error, '$loc.requirement', 'Undeclared facet "$key"');
+          add(
+            'L-01',
+            LintSeverity.error,
+            '$loc.requirement',
+            'Undeclared facet "$key"',
+          );
         }
       }
 
       // Axis leaves drive L-02, L-04, L-05.
       _axisLeaves(p.requirement, false, (axis, mag, guarded) {
         if (!axis.isCanonical) {
-          add('L-02', LintSeverity.error, '$loc.requirement',
-              'Non-canonical / would-be-new axis "${axis.raw}"');
+          add(
+            'L-02',
+            LintSeverity.error,
+            '$loc.requirement',
+            'Non-canonical / would-be-new axis "${axis.raw}"',
+          );
           return;
         }
         final key = axis.key!;
         // L-05 — impossible threshold (unreachable leaf).
         if (mag > ontology.magnitudeMax) {
-          add('L-05', LintSeverity.error, '$loc.requirement',
-              'AxisAtLeast(${axis.raw}, $mag) exceeds ontology max ${ontology.magnitudeMax} — unreachable');
+          add(
+            'L-05',
+            LintSeverity.error,
+            '$loc.requirement',
+            'AxisAtLeast(${axis.raw}, $mag) exceeds ontology max ${ontology.magnitudeMax} — unreachable',
+          );
         } else if (mag < ontology.magnitudeMin) {
-          add('L-05', LintSeverity.warning, '$loc.requirement',
-              'AxisAtLeast(${axis.raw}, $mag) below ontology min ${ontology.magnitudeMin} — always true');
+          add(
+            'L-05',
+            LintSeverity.warning,
+            '$loc.requirement',
+            'AxisAtLeast(${axis.raw}, $mag) below ontology min ${ontology.magnitudeMin} — always true',
+          );
         }
         // L-04 — magnitude outside the grounding band for the path's declared difficulty.
         if (p.difficulty != null && norms != null) {
           final ok = norms.inBand(key, p.difficulty!, mag);
           if (ok == false) {
-            add('L-04', LintSeverity.warning, '$loc.requirement',
-                'Magnitude $mag on ${axis.raw} is outside the ${p.difficulty!.name} band');
+            add(
+              'L-04',
+              LintSeverity.warning,
+              '$loc.requirement',
+              'Magnitude $mag on ${axis.raw} is outside the ${p.difficulty!.name} band',
+            );
           }
         }
       });
 
       // L-05 — orphaned path: target entity must exist.
       if (!entityIds.contains(p.target)) {
-        add('L-05', LintSeverity.error, '$loc.target', 'Unknown target "${p.target}"');
+        add(
+          'L-05',
+          LintSeverity.error,
+          '$loc.target',
+          'Unknown target "${p.target}"',
+        );
       }
 
       // L-06 — a discovery path must not emit a terminal Outcome.
       if (p.kind == PathKind.discovery) {
         for (final op in p.effect.ops) {
           if (op is Outcome && op.result != OutcomeResult.advance) {
-            add('L-06', LintSeverity.error, '$loc.effect',
-                'Discovery path emits a terminal Outcome (${op.result.name})');
+            add(
+              'L-06',
+              LintSeverity.error,
+              '$loc.effect',
+              'Discovery path emits a terminal Outcome (${op.result.name})',
+            );
           }
         }
       }
@@ -126,42 +161,85 @@ final class SceneLinter {
 
     // ---- effect-level checks across paths + reactives (L-01,09,10) ----
     for (final p in scene.paths) {
-      _lintEffect('path[${p.id}].effect', p.effect, allFacets, allMeters, entityIds,
-          scene.narrationKeys, add);
+      _lintEffect(
+        'path[${p.id}].effect',
+        p.effect,
+        allFacets,
+        allMeters,
+        entityIds,
+        scene.narrationKeys,
+        add,
+      );
     }
     for (final r in scene.reactiveThresholds) {
       final loc = 'reactive[${r.id}]';
       // L-09 — reactive must watch a declared meter.
       if (!allMeters.contains(r.meter)) {
-        add('L-09', LintSeverity.error, loc, 'Reactive watches undeclared meter "${r.meter}"');
+        add(
+          'L-09',
+          LintSeverity.error,
+          loc,
+          'Reactive watches undeclared meter "${r.meter}"',
+        );
       }
-      _lintEffect('$loc.effect', r.effect, allFacets, allMeters, entityIds,
-          scene.narrationKeys, add);
+      _lintEffect(
+        '$loc.effect',
+        r.effect,
+        allFacets,
+        allMeters,
+        entityIds,
+        scene.narrationKeys,
+        add,
+      );
     }
 
     // L-08 — reactive thresholds must not form a cycle (Resolver fixpoint must terminate).
     for (final cyc in _reactiveCycles(scene)) {
-      add('L-08', LintSeverity.error, 'reactiveThresholds', 'Reactive cycle: ${cyc.join(" -> ")}');
+      add(
+        'L-08',
+        LintSeverity.error,
+        'reactiveThresholds',
+        'Reactive cycle: ${cyc.join(" -> ")}',
+      );
     }
 
     // L-11 — FallbackBounds sanity.
     final fb = scene.fallbackBounds;
     for (final key in fb.touchableFacets) {
       if (!allFacets.contains(key)) {
-        add('L-11', LintSeverity.error, 'fallbackBounds', 'touchableFacets contains undeclared "$key"');
+        add(
+          'L-11',
+          LintSeverity.error,
+          'fallbackBounds',
+          'touchableFacets contains undeclared "$key"',
+        );
       }
     }
     for (final m in fb.touchableMeters) {
       if (!allMeters.contains(m)) {
-        add('L-11', LintSeverity.error, 'fallbackBounds', 'touchableMeters contains undeclared "$m"');
+        add(
+          'L-11',
+          LintSeverity.error,
+          'fallbackBounds',
+          'touchableMeters contains undeclared "$m"',
+        );
       }
     }
     if (fb.maxMeterDelta < 0) {
-      add('L-11', LintSeverity.error, 'fallbackBounds', 'maxMeterDelta must be >= 0');
+      add(
+        'L-11',
+        LintSeverity.error,
+        'fallbackBounds',
+        'maxMeterDelta must be >= 0',
+      );
     }
     if (fb.allowOutcome) {
-      add('L-11', LintSeverity.warning, 'fallbackBounds',
-          'allowOutcome=true lets a Tier-3 fallback declare a terminal outcome — usually unsafe');
+      add(
+        'L-11',
+        LintSeverity.warning,
+        'fallbackBounds',
+        'allowOutcome=true lets a Tier-3 fallback declare a terminal outcome — usually unsafe',
+      );
     }
 
     // L-12 — duplicate authored priorities (tie relies on declaration index).
@@ -171,18 +249,30 @@ final class SceneLinter {
     }
     for (final e in byPriority.entries) {
       if (e.value.length > 1) {
-        add('L-12', LintSeverity.warning, 'paths',
-            'Paths share priority ${e.key}: ${e.value.join(", ")} (tiebreak = declaration index)');
+        add(
+          'L-12',
+          LintSeverity.warning,
+          'paths',
+          'Paths share priority ${e.key}: ${e.value.join(", ")} (tiebreak = declaration index)',
+        );
       }
     }
 
     // L-13 — at least one progress path must reach a terminal Outcome.
-    final winnable = scene.paths.any((p) =>
-        p.kind == PathKind.progress &&
-        p.effect.ops.any((op) => op is Outcome && op.result != OutcomeResult.advance));
+    final winnable = scene.paths.any(
+      (p) =>
+          p.kind == PathKind.progress &&
+          p.effect.ops.any(
+            (op) => op is Outcome && op.result != OutcomeResult.advance,
+          ),
+    );
     if (!winnable) {
-      add('L-13', LintSeverity.error, 'paths',
-          'No progress path reaches a terminal Outcome — scene is unwinnable');
+      add(
+        'L-13',
+        LintSeverity.error,
+        'paths',
+        'No progress path reaches a terminal Outcome — scene is unwinnable',
+      );
     }
 
     // L-03 (PropValue) and L-14 (cross-scene promotion) are enforced by construction /
@@ -214,19 +304,39 @@ final class SceneLinter {
       switch (op) {
         case SetFacet(:final key):
           if (!allFacets.contains(key)) {
-            add('L-01', LintSeverity.error, loc, 'SetFacet on undeclared facet "$key"');
+            add(
+              'L-01',
+              LintSeverity.error,
+              loc,
+              'SetFacet on undeclared facet "$key"',
+            );
           }
         case RevealFacet(:final key):
           if (!allFacets.contains(key)) {
-            add('L-01', LintSeverity.error, loc, 'RevealFacet on undeclared facet "$key"');
+            add(
+              'L-01',
+              LintSeverity.error,
+              loc,
+              'RevealFacet on undeclared facet "$key"',
+            );
           }
         case AdjustMeter(:final meter):
           if (!allMeters.contains(meter)) {
-            add('L-09', LintSeverity.error, loc, 'AdjustMeter on undeclared meter "$meter"');
+            add(
+              'L-09',
+              LintSeverity.error,
+              loc,
+              'AdjustMeter on undeclared meter "$meter"',
+            );
           }
         case SetEntityProp(:final entityId):
           if (!entityIds.contains(entityId)) {
-            add('L-05', LintSeverity.error, loc, 'SetEntityProp on unknown entity "$entityId"');
+            add(
+              'L-05',
+              LintSeverity.error,
+              loc,
+              'SetEntityProp on unknown entity "$entityId"',
+            );
           }
         case TransitionNode() || Outcome():
           break;
@@ -235,7 +345,12 @@ final class SceneLinter {
     // L-10 — narration must resolve to an authored key.
     final nk = effect.narrationKey;
     if (nk != null && !narrationKeys.contains(nk)) {
-      add('L-10', LintSeverity.error, loc, 'narrationKey "$nk" not in declared narrationKeys');
+      add(
+        'L-10',
+        LintSeverity.error,
+        loc,
+        'narrationKey "$nk" not in declared narrationKeys',
+      );
     }
   }
 
@@ -251,16 +366,22 @@ final class SceneLinter {
       if (!axis.isCanonical) return;
       final key = axis.key!;
       final target = guarded ? guardedMin : bruteMin;
-      target[key] = target.containsKey(key) ? (mag < target[key]! ? mag : target[key]!) : mag;
+      target[key] = target.containsKey(key)
+          ? (mag < target[key]! ? mag : target[key]!)
+          : mag;
     });
     for (final key in guardedMin.keys) {
       if (!bruteMin.containsKey(key)) continue;
       final gb = norms.bandOf(key, guardedMin[key]!);
       final bb = norms.bandOf(key, bruteMin[key]!);
       if (gb != null && bb != null && gb.index >= bb.index) {
-        add('L-15', LintSeverity.warning, 'path[${p.id}].requirement',
-            'Decisive-move collapse (${guardedMin[key]} = ${gb.name}) is not a lower difficulty '
-            'band than the brute path (${bruteMin[key]} = ${bb.name}) — no real leverage');
+        add(
+          'L-15',
+          LintSeverity.warning,
+          'path[${p.id}].requirement',
+          'Decisive-move collapse (${guardedMin[key]} = ${gb.name}) is not a lower difficulty '
+              'band than the brute path (${bruteMin[key]} = ${bb.name}) — no real leverage',
+        );
       }
     }
   }
@@ -309,12 +430,19 @@ int _depth(ThresholdExpr e) {
 /// Collect axis leaves, tracking whether each is under a facet guard (an `AllOf` containing
 /// a facet predicate, or an `IfFacet.thenExpr`). Used by L-15.
 void _axisLeaves(
-    ThresholdExpr e, bool guarded, void Function(CapabilityAxis, int, bool) sink) {
+  ThresholdExpr e,
+  bool guarded,
+  void Function(CapabilityAxis, int, bool) sink,
+) {
   switch (e) {
     case AxisAtLeast(:final axis, :final magnitude):
       sink(axis, magnitude, guarded);
     case IfFacet(:final thenExpr, :final elseExpr):
-      _axisLeaves(thenExpr, true, sink); // then-branch fires when the facet IS set (the collapse)
+      _axisLeaves(
+        thenExpr,
+        true,
+        sink,
+      ); // then-branch fires when the facet IS set (the collapse)
       _axisLeaves(elseExpr, guarded, sink); // else-branch is the brute path
     case AllOf(:final parts):
       final hasFacet = parts.any((p) => p is Invokes || p is WorldFacet);

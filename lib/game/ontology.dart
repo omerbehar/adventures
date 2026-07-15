@@ -27,7 +27,10 @@ enum Difficulty { trivial, easy, standard, hard, extreme }
 /// Canonical value-equality key for an axis: `(dimension, channel?)`. Records give
 /// structural equality for free, so this is the correct type for map keys / threshold
 /// matching (ADR-0002 — a plain-class key would miss on every lookup).
-typedef CapabilityAxisKey = (CapabilityDimension dimension, SocialChannel? channel);
+typedef CapabilityAxisKey = (
+  CapabilityDimension dimension,
+  SocialChannel? channel,
+);
 
 /// Open, scene-local facet key. Declared per-scene; no global enum (ADR-0002).
 typedef FacetKey = String;
@@ -50,23 +53,34 @@ final class CapabilityAxis {
   /// Canonical iff it resolves to a dimension with a channel exactly-when social.
   bool get isCanonical =>
       dimension != null &&
-      (dimension == CapabilityDimension.social ? channel != null : channel == null);
+      (dimension == CapabilityDimension.social
+          ? channel != null
+          : channel == null);
 
   /// The value-equality key, or null if unresolved.
-  CapabilityAxisKey? get key => dimension == null ? null : (dimension!, channel);
+  CapabilityAxisKey? get key =>
+      dimension == null ? null : (dimension!, channel);
 
   /// Parse `dimension` or `social.channel`. Always returns; leaves [dimension] null when
   /// the string is not a canonical axis (unknown dimension, a channel on a non-social axis,
   /// or extra segments) so callers can lint (rule L-02) rather than throw.
-  static CapabilityAxis parse(String s) {
+  factory CapabilityAxis.parse(String s) {
     final parts = s.split('.');
     final dim = _dimByName[parts[0]];
     if (dim == null) return CapabilityAxis._(s, null, null);
     if (parts.length == 1) return CapabilityAxis._(s, dim, null);
     if (parts.length == 2 && dim == CapabilityDimension.social) {
-      return CapabilityAxis._(s, dim, _chanByName[parts[1]]); // channel may be null → not canonical
+      return CapabilityAxis._(
+        s,
+        dim,
+        _chanByName[parts[1]],
+      ); // channel may be null → not canonical
     }
-    return CapabilityAxis._(s, null, null); // channel on a non-social axis, or malformed
+    return CapabilityAxis._(
+      s,
+      null,
+      null,
+    ); // channel on a non-social axis, or malformed
   }
 
   static final Map<String, CapabilityDimension> _dimByName = {

@@ -9,9 +9,9 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:adventures/scene/scene_model.dart';
 import 'package:adventures/scene/authoring/grounding_tables.dart';
 import 'package:adventures/scene/authoring/scene_linter.dart';
+import 'package:adventures/scene/scene_model.dart';
 
 void main(List<String> args) {
   final dir = Directory(args.isNotEmpty ? args.first : 'assets/scenes');
@@ -20,12 +20,13 @@ void main(List<String> args) {
     exit(0);
   }
 
-  final files = dir
-      .listSync()
-      .whereType<File>()
-      .where((f) => f.path.endsWith('.json'))
-      .toList()
-    ..sort((a, b) => a.path.compareTo(b.path));
+  final files =
+      dir
+          .listSync()
+          .whereType<File>()
+          .where((f) => f.path.endsWith('.json'))
+          .toList()
+        ..sort((a, b) => a.path.compareTo(b.path));
 
   final linter = SceneLinter(grounding: GroundingTables.defaults());
   var scenesWithErrors = 0;
@@ -60,7 +61,8 @@ void main(List<String> args) {
   }
 
   stdout.writeln(
-      '\n${files.length} scene file(s) · $totalFindings finding(s) · $scenesWithErrors with errors.');
+    '\n${files.length} scene file(s) · $totalFindings finding(s) · $scenesWithErrors with errors.',
+  );
   exit(scenesWithErrors > 0 ? 1 : 0);
 }
 
@@ -72,7 +74,7 @@ Map<String, LintReport> _lintFile(String source, SceneLinter linter) {
 
   if (json.containsKey('nodes')) {
     final globalFacets = {
-      ...(json['globalFacets'] as List? ?? const []).cast<String>()
+      ...(json['globalFacets'] as List? ?? const []).cast<String>(),
     };
     final globalMeters = {
       for (final e in ((json['globalMeters'] as Map?) ?? const {}).entries)
@@ -80,8 +82,11 @@ Map<String, LintReport> _lintFile(String source, SceneLinter linter) {
     };
     for (final e in (json['nodes'] as Map).entries) {
       final node = SceneModel.fromJson((e.value as Map).cast());
-      out[e.key as String] =
-          linter.lint(node, globalFacets: globalFacets, globalMeters: globalMeters);
+      out[e.key as String] = linter.lint(
+        node,
+        globalFacets: globalFacets,
+        globalMeters: globalMeters,
+      );
     }
   } else {
     final node = SceneModel.fromJson(json);

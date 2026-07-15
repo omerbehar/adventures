@@ -6,13 +6,12 @@
 
 import 'dart:convert';
 
-import 'package:flutter_test/flutter_test.dart';
-
 import 'package:adventures/game/ontology.dart';
 import 'package:adventures/game/state_delta.dart';
-import 'package:adventures/scene/scene_model.dart';
 import 'package:adventures/scene/authoring/grounding_tables.dart';
 import 'package:adventures/scene/authoring/scene_linter.dart';
+import 'package:adventures/scene/scene_model.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 /// The canonical magistrate scene — must lint clean (spec §6).
 const String magistrateJson = r'''
@@ -43,9 +42,11 @@ const String magistrateJson = r'''
 }
 ''';
 
-SceneModel parse(String s) => SceneModel.fromJson((jsonDecode(s) as Map).cast());
+SceneModel parse(String s) =>
+    SceneModel.fromJson((jsonDecode(s) as Map).cast());
 
-SceneLinter linterWithGrounding() => SceneLinter(grounding: GroundingTables.defaults());
+SceneLinter linterWithGrounding() =>
+    SceneLinter(grounding: GroundingTables.defaults());
 
 /// A minimal winnable scene builder for negative-case tests.
 SceneModel scene({
@@ -56,20 +57,24 @@ SceneModel scene({
   List<ReactiveThreshold> reactives = const [],
   Set<String> narration = const {'n'},
   FallbackBounds? fallback,
-}) =>
-    SceneModel(
-      id: 't',
-      schemaVersion: 1,
-      entities: entities,
-      paths: paths,
-      declaredFacets: facets,
-      localMeters: meters,
-      reactiveThresholds: reactives,
-      narrationKeys: narration,
-      fallbackBounds: fallback ??
-          const FallbackBounds(
-              touchableFacets: {}, touchableMeters: {}, maxMeterDelta: 0, allowOutcome: false),
-    );
+}) => SceneModel(
+  id: 't',
+  schemaVersion: 1,
+  entities: entities,
+  paths: paths,
+  declaredFacets: facets,
+  localMeters: meters,
+  reactiveThresholds: reactives,
+  narrationKeys: narration,
+  fallbackBounds:
+      fallback ??
+      const FallbackBounds(
+        touchableFacets: {},
+        touchableMeters: {},
+        maxMeterDelta: 0,
+        allowOutcome: false,
+      ),
+);
 
 SolutionPath winPath({
   required ThresholdExpr req,
@@ -78,23 +83,23 @@ SolutionPath winPath({
   PathKind kind = PathKind.progress,
   int priority = 10,
   Difficulty? difficulty,
-}) =>
-    SolutionPath(
-      id: id,
-      requirement: req,
-      target: target,
-      effect: const StateDelta([Outcome(OutcomeResult.win)], narrationKey: 'n'),
-      kind: kind,
-      priority: priority,
-      difficulty: difficulty,
-    );
+}) => SolutionPath(
+  id: id,
+  requirement: req,
+  target: target,
+  effect: const StateDelta([Outcome(OutcomeResult.win)], narrationKey: 'n'),
+  kind: kind,
+  priority: priority,
+  difficulty: difficulty,
+);
 
 CapabilityAxis axis(String s) => CapabilityAxis.parse(s);
 
 bool hasError(LintReport r, String rule) =>
     r.findings.any((f) => f.ruleId == rule && f.severity == LintSeverity.error);
-bool hasWarning(LintReport r, String rule) =>
-    r.findings.any((f) => f.ruleId == rule && f.severity == LintSeverity.warning);
+bool hasWarning(LintReport r, String rule) => r.findings.any(
+  (f) => f.ruleId == rule && f.severity == LintSeverity.warning,
+);
 
 void main() {
   final linter = linterWithGrounding();
@@ -129,7 +134,9 @@ void main() {
     });
 
     test('test_L02_noncanonical_axis_errors', () {
-      final s = scene(paths: [winPath(req: AxisAtLeast(axis('bogusAxis'), 10))]);
+      final s = scene(
+        paths: [winPath(req: AxisAtLeast(axis('bogusAxis'), 10))],
+      );
       expect(hasError(linter.lint(s), 'L-02'), isTrue);
     });
 
@@ -139,7 +146,9 @@ void main() {
     });
 
     test('test_L05_unknown_target_errors', () {
-      final s = scene(paths: [winPath(req: AxisAtLeast(axis('force'), 10), target: 'ghost')]);
+      final s = scene(
+        paths: [winPath(req: AxisAtLeast(axis('force'), 10), target: 'ghost')],
+      );
       expect(hasError(linter.lint(s), 'L-05'), isTrue);
     });
 
@@ -153,12 +162,19 @@ void main() {
         id: 'd',
         requirement: AxisAtLeast(axis('insight'), 10),
         target: 'self',
-        effect: const StateDelta([Outcome(OutcomeResult.win)], narrationKey: 'n'),
+        effect: const StateDelta([
+          Outcome(OutcomeResult.win),
+        ], narrationKey: 'n'),
         kind: PathKind.discovery,
         priority: 5,
       );
       // Also include a winnable progress path so L-13 doesn't mask the check.
-      final s = scene(paths: [discovery, winPath(req: AxisAtLeast(axis('force'), 10))]);
+      final s = scene(
+        paths: [
+          discovery,
+          winPath(req: AxisAtLeast(axis('force'), 10)),
+        ],
+      );
       expect(hasError(linter.lint(s), 'L-06'), isTrue);
     });
 
@@ -178,16 +194,23 @@ void main() {
       };
       final reactives = [
         const ReactiveThreshold(
-            id: 'rx', meter: 'x', atLeast: 10,
-            effect: StateDelta([AdjustMeter('y', 5)])),
+          id: 'rx',
+          meter: 'x',
+          atLeast: 10,
+          effect: StateDelta([AdjustMeter('y', 5)]),
+        ),
         const ReactiveThreshold(
-            id: 'ry', meter: 'y', atLeast: 10,
-            effect: StateDelta([AdjustMeter('x', 5)])),
+          id: 'ry',
+          meter: 'y',
+          atLeast: 10,
+          effect: StateDelta([AdjustMeter('x', 5)]),
+        ),
       ];
       final s = scene(
-          meters: meters,
-          reactives: reactives,
-          paths: [winPath(req: AxisAtLeast(axis('force'), 10))]);
+        meters: meters,
+        reactives: reactives,
+        paths: [winPath(req: AxisAtLeast(axis('force'), 10))],
+      );
       expect(hasError(linter.lint(s), 'L-08'), isTrue);
     });
 
@@ -196,8 +219,10 @@ void main() {
         id: 'w',
         requirement: AxisAtLeast(axis('force'), 10),
         target: 'self',
-        effect: const StateDelta(
-            [AdjustMeter('nope', 5), Outcome(OutcomeResult.win)], narrationKey: 'n'),
+        effect: const StateDelta([
+          AdjustMeter('nope', 5),
+          Outcome(OutcomeResult.win),
+        ], narrationKey: 'n'),
         kind: PathKind.progress,
         priority: 1,
       );
@@ -209,29 +234,43 @@ void main() {
         id: 'w',
         requirement: AxisAtLeast(axis('force'), 10),
         target: 'self',
-        effect: const StateDelta([Outcome(OutcomeResult.win)], narrationKey: 'missing'),
+        effect: const StateDelta([
+          Outcome(OutcomeResult.win),
+        ], narrationKey: 'missing'),
         kind: PathKind.progress,
         priority: 1,
       );
-      expect(hasError(linter.lint(scene(paths: [p], narration: {'n'})), 'L-10'), isTrue);
+      expect(
+        hasError(linter.lint(scene(paths: [p], narration: {'n'})), 'L-10'),
+        isTrue,
+      );
     });
 
-    test('test_L11_touchable_undeclared_meter_errors_and_allowOutcome_warns', () {
-      final s = scene(
-        paths: [winPath(req: AxisAtLeast(axis('force'), 10))],
-        fallback: const FallbackBounds(
-            touchableFacets: {}, touchableMeters: {'ghostMeter'}, maxMeterDelta: 5, allowOutcome: true),
-      );
-      final r = linter.lint(s);
-      expect(hasError(r, 'L-11'), isTrue);
-      expect(hasWarning(r, 'L-11'), isTrue); // allowOutcome=true
-    });
+    test(
+      'test_L11_touchable_undeclared_meter_errors_and_allowOutcome_warns',
+      () {
+        final s = scene(
+          paths: [winPath(req: AxisAtLeast(axis('force'), 10))],
+          fallback: const FallbackBounds(
+            touchableFacets: {},
+            touchableMeters: {'ghostMeter'},
+            maxMeterDelta: 5,
+            allowOutcome: true,
+          ),
+        );
+        final r = linter.lint(s);
+        expect(hasError(r, 'L-11'), isTrue);
+        expect(hasWarning(r, 'L-11'), isTrue); // allowOutcome=true
+      },
+    );
 
     test('test_L12_duplicate_priority_warns', () {
-      final s = scene(paths: [
-        winPath(req: AxisAtLeast(axis('force'), 10), id: 'a', priority: 5),
-        winPath(req: AxisAtLeast(axis('insight'), 10), id: 'b', priority: 5),
-      ]);
+      final s = scene(
+        paths: [
+          winPath(req: AxisAtLeast(axis('force'), 10), id: 'a', priority: 5),
+          winPath(req: AxisAtLeast(axis('insight'), 10), id: 'b', priority: 5),
+        ],
+      );
       expect(hasWarning(linter.lint(s), 'L-12'), isTrue);
     });
 
@@ -244,7 +283,10 @@ void main() {
         kind: PathKind.discovery,
         priority: 1,
       );
-      expect(hasError(linter.lint(scene(paths: [onlyDiscovery])), 'L-13'), isTrue);
+      expect(
+        hasError(linter.lint(scene(paths: [onlyDiscovery])), 'L-13'),
+        isTrue,
+      );
     });
 
     test('test_L15_collapse_without_leverage_warns', () {
