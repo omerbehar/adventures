@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "id": "magistrate",
+  "declaredFacets": ["scandal"],
+  "localMeters": { "suspicion": { "min": 0, "max": 100, "initial": 0 } },
+  "narrationKeys": ["acquit", "acquitLoud", "reveal", "lockdown", "nudge"],
+  "entities": [
+    {
+      "id": "vorne",
+      "type": "magistrate",
+      "props": { "hostile": { "bool": true }, "persuadeBase": { "int": 35 }, "intimidate": { "int": 40 } }
+    }
+  ],
+  "paths": [
+    {
+      "id": "discover",
+      "kind": "discovery",
+      "target": "vorne",
+      "priority": 30,
+      "requirement": { "AllOf": [ { "Not": { "WorldFacet": "scandal" } }, { "AxisAtLeast": ["insight", 25] } ] },
+      "effect": { "ops": [ { "RevealFacet": "scandal" } ], "narrationKey": "reveal" }
+    },
+    {
+      "id": "persuade",
+      "kind": "progress",
+      "target": "vorne",
+      "priority": 20,
+      "requirement": {
+        "AnyOf": [
+          { "AllOf": [ { "WorldFacet": "scandal" }, { "Invokes": "scandal" }, { "AxisAtLeast": ["social.persuasion", 15] } ] },
+          { "AxisAtLeast": ["social.persuasion", 35] }
+        ]
+      },
+      "effect": { "ops": [ { "Outcome": "win" } ], "narrationKey": "acquit" }
+    },
+    {
+      "id": "intimidate",
+      "kind": "progress",
+      "target": "vorne",
+      "priority": 10,
+      "requirement": { "AxisAtLeast": ["social.intimidation", 40] },
+      "effect": { "ops": [ { "AdjustMeter": ["suspicion", 30] }, { "Outcome": "win" } ], "narrationKey": "acquitLoud" }
+    }
+  ],
+  "reactiveThresholds": [
+    {
+      "id": "lockdown",
+      "meter": "suspicion",
+      "atLeast": 60,
+      "effect": { "ops": [ { "Outcome": "lose" } ], "narrationKey": "lockdown" }
+    }
+  ],
+  "fallbackBounds": { "touchableFacets": [], "touchableMeters": ["suspicion"], "maxMeterDelta": 10, "allowOutcome": false }
+}

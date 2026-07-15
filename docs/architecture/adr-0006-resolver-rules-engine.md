@@ -141,8 +141,9 @@ final class Resolver {
 ### Implementation Guidelines
 
 - Place in `lib/resolver/` (pure Dart). No Flutter imports; no service calls (the cascade calls the Resolver, not vice-versa).
-- Use Dart **switch expressions with object patterns over the `sealed ThresholdExpr`** for exhaustive, readable matching (e.g. `case AxisAtLeast(:final axis, :final magnitude)`). These are type/object patterns against a sealed class — not record patterns.
+- Use Dart **switch expressions with object patterns over the `sealed ThresholdExpr`** for exhaustive, readable matching. As of ADR-0003 R2 the tree has seven variants — `AxisAtLeast`, `IfFacet`, `WorldFacet`, `Invokes`, `AllOf`, `AnyOf`, `Not` — each returning `bool`; recurse into `AllOf`/`AnyOf`/`Not` children and both `IfFacet` branches. These are type/object patterns against a sealed class — not record patterns.
 - **Axis matching** compares `vector.magnitudes[axis.key]` against `AxisAtLeast.magnitude` using the record `CapabilityAxisKey` (ADR-0002) — value-equality is required for deterministic lookup.
+- **`Invokes(facet)` reads `vector.invokedFacets`; `WorldFacet(facet)`/`IfFacet` read `state.facets`** (ADR-0001). The decisive-move collapse keys on `Invokes` — the reliably-classified leverage signal (ADR-0003 R2 / scene-decomposition-spec §3). Evaluation is pure over `(vector, state.facets)` — no I/O, deterministic.
 - **Outcome single source of truth**: derive `Resolved.outcome` *from* the applied `Outcome` op in the fired `StateDelta` (ADR-0001), never compute a parallel outcome. If no `Outcome` op fired, the outcome is `advance`.
 - Make path selection a **total order**: authored `priority` then a stable secondary key (e.g. declaration index). Never rely on map/set iteration order.
 - Reactive-threshold evaluation runs to a **fixpoint** with a guard against cycles (authored thresholds must be acyclic; detect and error in the Linter, ADR-0005).
