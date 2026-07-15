@@ -40,7 +40,9 @@ linter:
     - always_declare_return_types
     # always_put_control_body_on_new_line removed: forbids idiomatic guard clauses
     # like `if (cond) return;`.
-    - always_put_required_named_parameters_first
+    # always_put_required_named_parameters_first removed: conflicts with the idiomatic Flutter
+    # widget constructor order `{super.key, required this.x}` — Flutter's own widgets put the
+    # optional `key` first, which this lint would forbid.
     - annotate_overrides
     - avoid_bool_literals_in_conditional_expressions
     - avoid_catching_errors
