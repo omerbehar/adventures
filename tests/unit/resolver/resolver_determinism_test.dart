@@ -3,6 +3,7 @@
 /// Validates the core MVP requirement: same (WorldState, CapabilityVector) → identical
 /// ResolveResult across 1000 runs. Pure-Dart, no I/O, no time/randomness (ADR-0006).
 /// Enable by removing `skip:` and wiring the fixtures once `lib/resolver/` lands.
+library;
 
 import 'package:flutter_test/flutter_test.dart';
 
