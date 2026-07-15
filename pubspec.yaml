@@ -22,6 +22,8 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/scenes/
 
 # Initial scaffold for the Adventures project.
 # This pubspec.yaml is a minimal baseline; expand with actual dependencies

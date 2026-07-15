@@ -34,11 +34,19 @@ jobs:
         continue-on-error: false
 
       - name: Run unit and widget tests
-        run: flutter test --coverage
+        # Tests live under tests/ (project convention), not the default test/ dir.
+        run: flutter test tests/unit --coverage
         continue-on-error: false
 
       - name: Run integration tests
-        run: flutter test integration_test/
+        # Only run if integration test files exist (avoids "no tests found" failures
+        # while tests/integration/ is still a placeholder).
+        run: |
+          if ls tests/integration/**/*_test.dart >/dev/null 2>&1; then
+            flutter test tests/integration
+          else
+            echo "No integration tests yet — skipping."
+          fi
         continue-on-error: false
 
       - name: Upload coverage to Codecov
