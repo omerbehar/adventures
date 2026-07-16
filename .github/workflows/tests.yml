@@ -33,6 +33,12 @@ jobs:
         run: dart format --output=none --set-exit-if-changed .
         continue-on-error: false
 
+      - name: Check core import discipline
+        # ADR-0009 layering gate: the pure-Dart core (lib/game, lib/resolver, lib/scene)
+        # must never import package:flutter / dart:ui. Fails the build if it does.
+        run: dart run tool/check_core_imports.dart
+        continue-on-error: false
+
       - name: Lint authored scenes
         # Deterministic Scene Linter (ADR-0005) over every assets/scenes/*.json.
         # Fails the build on any parse error or error-severity finding.
